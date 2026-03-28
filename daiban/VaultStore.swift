@@ -10,6 +10,21 @@ final class VaultStore {
     private(set) var isLoading = false
     private(set) var error: String?
     private(set) var vaultURL: URL?
+    private(set) var dailyNotesConfig: DailyNotesConfig?
+
+    var useDailyNoteDate: Bool {
+        didSet {
+            UserDefaults.standard.set(useDailyNoteDate, forKey: "useDailyNoteDate")
+            reload()
+        }
+    }
+
+    var dailyNoteDateTarget: DailyNoteDateTarget {
+        didSet {
+            UserDefaults.standard.set(dailyNoteDateTarget.rawValue, forKey: "dailyNoteDateTarget")
+            reload()
+        }
+    }
 
     private let scanner = VaultScanner()
     private let writer = TaskWriter()
@@ -29,6 +44,9 @@ final class VaultStore {
     }
 
     init() {
+        self.useDailyNoteDate = UserDefaults.standard.bool(forKey: "useDailyNoteDate")
+        let savedTarget = UserDefaults.standard.string(forKey: "dailyNoteDateTarget")
+        self.dailyNoteDateTarget = savedTarget.flatMap(DailyNoteDateTarget.init(rawValue:)) ?? .dueDate
         restoreBookmark()
     }
 
@@ -43,6 +61,7 @@ final class VaultStore {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         saveBookmark(for: url)
         vaultURL = url
+        refreshDailyNotesConfig()
         reload()
         #endif
     }
@@ -52,9 +71,11 @@ final class VaultStore {
         isLoading = true
         error = nil
 
+        let options = scanOptions
+
         Task.detached { [scanner] in
             do {
-                let scanned = try scanner.scanVault(at: url)
+                let scanned = try scanner.scanVault(at: url, options: options)
                 await MainActor.run { [self] in
                     self.tasks = scanned
                     self.isLoading = false
@@ -87,6 +108,21 @@ final class VaultStore {
         UserDefaults.standard.removeObject(forKey: Self.bookmarkKey)
         vaultURL = nil
         tasks = []
+        dailyNotesConfig = nil
+    }
+
+    // MARK: - Private
+
+    private var scanOptions: ScanOptions {
+        ScanOptions(dailyNoteDateTarget: useDailyNoteDate ? dailyNoteDateTarget : nil)
+    }
+
+    private func refreshDailyNotesConfig() {
+        guard let url = vaultURL else {
+            dailyNotesConfig = nil
+            return
+        }
+        dailyNotesConfig = scanner.loadDailyNotesConfig(vaultURL: url)
     }
 
     // MARK: - Bookmark persistence
@@ -119,6 +155,7 @@ final class VaultStore {
             if isStale {
                 saveBookmark(for: url)
             }
+            refreshDailyNotesConfig()
             reload()
         } catch {
             self.error = "Failed to restore vault access: \(error.localizedDescription)"

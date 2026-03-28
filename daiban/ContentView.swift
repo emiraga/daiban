@@ -2,7 +2,7 @@ import SwiftUI
 import ObsidianParser
 
 struct ContentView: View {
-    @State private var store = VaultStore()
+    @Bindable var store: VaultStore
     @State private var searchText = ""
     @State private var showCompleted = false
     @State private var selectedGrouping = TaskGrouping.file
@@ -157,5 +157,5 @@ private extension TaskPriority {
 }
 
 #Preview {
-    ContentView()
+    ContentView(store: VaultStore())
 }
