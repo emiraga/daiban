@@ -4,12 +4,13 @@ import ObsidianParser
 struct ContentView: View {
     @Bindable var store: VaultStore
     @State private var searchText = ""
-    @State private var showCompleted = false
-    @State private var selectedGrouping = TaskGrouping.file
+    @AppStorage("showCompleted") private var showCompleted = false
+    @AppStorage("selectedGrouping") private var selectedGrouping = TaskGrouping.file
 
     enum TaskGrouping: String, CaseIterable {
         case file = "File"
         case dueDate = "Due Date"
+        case scheduledDate = "Scheduled Date"
         case priority = "Priority"
     }
 
@@ -31,17 +32,9 @@ struct ContentView: View {
             return Dictionary(grouping: tasks, by: \.filePath)
                 .sorted { $0.key < $1.key }
         case .dueDate:
-            return Dictionary(grouping: tasks) { task -> String in
-                if let due = task.dueDate {
-                    return due.formatted(date: .abbreviated, time: .omitted)
-                }
-                return "No due date"
-            }
-            .sorted { lhs, rhs in
-                if lhs.key == "No due date" { return false }
-                if rhs.key == "No due date" { return true }
-                return lhs.key < rhs.key
-            }
+            return groupByDate(tasks, keyPath: \.dueDate, noDateLabel: "No due date")
+        case .scheduledDate:
+            return groupByDate(tasks, keyPath: \.scheduledDate, noDateLabel: "No scheduled date")
         case .priority:
             return Dictionary(grouping: tasks) { task -> String in
                 task.priority?.label ?? "No priority"
@@ -128,6 +121,20 @@ struct ContentView: View {
             }
         }
         .navigationTitle("Daiban")
+    }
+
+    private func groupByDate(_ tasks: [ObsidianTask], keyPath: KeyPath<ObsidianTask, Date?>, noDateLabel: String) -> [(String, [ObsidianTask])] {
+        Dictionary(grouping: tasks) { task -> String in
+            if let date = task[keyPath: keyPath] {
+                return date.formatted(date: .abbreviated, time: .omitted)
+            }
+            return noDateLabel
+        }
+        .sorted { lhs, rhs in
+            if lhs.key == noDateLabel { return false }
+            if rhs.key == noDateLabel { return true }
+            return lhs.key < rhs.key
+        }
     }
 
     private var welcomeView: some View {
