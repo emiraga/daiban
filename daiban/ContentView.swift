@@ -1,80 +1,161 @@
-//
-//  ContentView.swift
-//  daiban
-//
-//  Created by Emir B on 3/28/26.
-//
-
 import SwiftUI
-import SwiftData
+import ObsidianParser
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @State private var store = VaultStore()
+    @State private var searchText = ""
+    @State private var showCompleted = false
+    @State private var selectedGrouping = TaskGrouping.file
+
+    enum TaskGrouping: String, CaseIterable {
+        case file = "File"
+        case dueDate = "Due Date"
+        case priority = "Priority"
+    }
+
+    var filteredTasks: [ObsidianTask] {
+        let base = showCompleted ? store.tasks : store.incompleteTasks
+        guard !searchText.isEmpty else { return base }
+        let query = searchText.lowercased()
+        return base.filter {
+            $0.description.lowercased().contains(query)
+            || $0.filePath.lowercased().contains(query)
+            || $0.tags.contains(where: { $0.lowercased().contains(query) })
+        }
+    }
+
+    var groupedTasks: [(String, [ObsidianTask])] {
+        let tasks = filteredTasks
+        switch selectedGrouping {
+        case .file:
+            return Dictionary(grouping: tasks, by: \.filePath)
+                .sorted { $0.key < $1.key }
+        case .dueDate:
+            return Dictionary(grouping: tasks) { task -> String in
+                if let due = task.dueDate {
+                    return due.formatted(date: .abbreviated, time: .omitted)
+                }
+                return "No due date"
+            }
+            .sorted { lhs, rhs in
+                if lhs.key == "No due date" { return false }
+                if rhs.key == "No due date" { return true }
+                return lhs.key < rhs.key
+            }
+        case .priority:
+            return Dictionary(grouping: tasks) { task -> String in
+                task.priority?.label ?? "No priority"
+            }
+            .sorted { lhs, rhs in
+                let order = ["Highest", "High", "Medium", "Low", "Lowest", "No priority"]
+                return (order.firstIndex(of: lhs.key) ?? 99) < (order.firstIndex(of: rhs.key) ?? 99)
+            }
+        }
+    }
 
     var body: some View {
-        NavigationViewWrapper {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
+        NavigationSplitView {
+            sidebar
+        } detail: {
+            if store.hasVault {
+                taskList
+            } else {
+                welcomeView
             }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
-            .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
+        }
+        .searchable(text: $searchText, prompt: "Filter tasks")
+    }
+
+    private var sidebar: some View {
+        List {
+            if store.hasVault {
+                Section("View") {
+                    Label("Incomplete (\(store.incompleteTasks.count))", systemImage: "circle")
+                        .onTapGesture { showCompleted = false }
+                        .foregroundStyle(!showCompleted ? .primary : .secondary)
+
+                    Label("All (\(store.tasks.count))", systemImage: "list.bullet")
+                        .onTapGesture { showCompleted = true }
+                        .foregroundStyle(showCompleted ? .primary : .secondary)
                 }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+
+                Section("Group By") {
+                    Picker("Grouping", selection: $selectedGrouping) {
+                        ForEach(TaskGrouping.allCases, id: \.self) { grouping in
+                            Text(grouping.rawValue).tag(grouping)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                }
+
+                Section {
+                    Button("Reload", systemImage: "arrow.clockwise") {
+                        store.reload()
+                    }
+                    Button("Change Vault", systemImage: "folder") {
+                        store.selectVault()
+                    }
+                    Button("Disconnect Vault", systemImage: "xmark.circle", role: .destructive) {
+                        store.disconnectVault()
                     }
                 }
             }
         }
+        .navigationSplitViewColumnWidth(min: 180, ideal: 220)
     }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+    private var taskList: some View {
+        Group {
+            if store.isLoading {
+                ProgressView("Scanning vault...")
+            } else if let error = store.error {
+                ContentUnavailableView("Error", systemImage: "exclamationmark.triangle", description: Text(error))
+            } else if filteredTasks.isEmpty {
+                ContentUnavailableView("No Tasks", systemImage: "checkmark.circle", description: Text("No tasks found"))
+            } else {
+                List {
+                    ForEach(groupedTasks, id: \.0) { group, tasks in
+                        Section(group) {
+                            ForEach(tasks) { task in
+                                TaskRowView(task: task) {
+                                    store.toggleCompletion(task)
+                                }
+                            }
+                        }
+                    }
+                }
             }
+        }
+        .navigationTitle("Daiban")
+    }
+
+    private var welcomeView: some View {
+        ContentUnavailableView {
+            Label("Welcome to Daiban", systemImage: "checkmark.circle")
+        } description: {
+            Text("Select your Obsidian vault to get started")
+        } actions: {
+            Button("Open Vault") {
+                store.selectVault()
+            }
+            .buttonStyle(.borderedProminent)
         }
     }
 }
 
-fileprivate struct NavigationViewWrapper<Content: View>: View {
-    let content: () -> Content
-
-    var body: some View {
-#if os(macOS)
-        NavigationSplitView {
-            content()
-        } detail: {
-            Text("Select an item")
+private extension TaskPriority {
+    var label: String {
+        switch self {
+        case .highest: "Highest"
+        case .high: "High"
+        case .medium: "Medium"
+        case .low: "Low"
+        case .lowest: "Lowest"
         }
-#else
-        content()
-#endif
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
