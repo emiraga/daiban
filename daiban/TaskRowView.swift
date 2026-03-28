@@ -15,7 +15,7 @@ struct TaskRowView: View {
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(task.description)
+                MarkdownText(task.description)
                     .strikethrough(task.status.isComplete)
                     .foregroundStyle(task.status.isComplete ? .secondary : .primary)
 
