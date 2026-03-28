@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		3D2FE5E82F77F1BE00CD99E6 /* ObsidianParser in Frameworks */ = {isa = PBXBuildFile; productRef = 3D2FE5E72F77F1BE00CD99E6 /* ObsidianParser */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		3D2FE5C82F77EEEC00CD99E6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		3D2FE5B82F77EEEB00CD99E6 /* daiban.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = daiban.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3D2FE5C72F77EEEC00CD99E6 /* daibanTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = daibanTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3D2FE5D12F77EEEC00CD99E6 /* daibanUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = daibanUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3D2FE5E42F77F11300CD99E6 /* DaibanCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = DaibanCore; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3D2FE5E82F77F1BE00CD99E6 /* ObsidianParser in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,9 +81,11 @@
 		3D2FE5AF2F77EEEB00CD99E6 = {
 			isa = PBXGroup;
 			children = (
+				3D2FE5E52F77F11300CD99E6 /* Packages */,
 				3D2FE5BA2F77EEEB00CD99E6 /* daiban */,
 				3D2FE5CA2F77EEEC00CD99E6 /* daibanTests */,
 				3D2FE5D42F77EEEC00CD99E6 /* daibanUITests */,
+				3D2FE5E62F77F1BE00CD99E6 /* Frameworks */,
 				3D2FE5B92F77EEEB00CD99E6 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,6 +98,21 @@
 				3D2FE5D12F77EEEC00CD99E6 /* daibanUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		3D2FE5E52F77F11300CD99E6 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				3D2FE5E42F77F11300CD99E6 /* DaibanCore */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		3D2FE5E62F77F1BE00CD99E6 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -106,12 +129,14 @@
 			buildRules = (
 			);
 			dependencies = (
+				3D2FE5EA2F77F20300CD99E6 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				3D2FE5BA2F77EEEB00CD99E6 /* daiban */,
 			);
 			name = daiban;
 			packageProductDependencies = (
+				3D2FE5E72F77F1BE00CD99E6 /* ObsidianParser */,
 			);
 			productName = daiban;
 			productReference = 3D2FE5B82F77EEEB00CD99E6 /* daiban.app */;
@@ -266,6 +291,10 @@
 			target = 3D2FE5B72F77EEEB00CD99E6 /* daiban */;
 			targetProxy = 3D2FE5D22F77EEEC00CD99E6 /* PBXContainerItemProxy */;
 		};
+		3D2FE5EA2F77F20300CD99E6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			productRef = 3D2FE5E92F77F20300CD99E6 /* ObsidianParser */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -394,6 +423,8 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = daiban;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -436,6 +467,8 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = daiban;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -605,6 +638,17 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3D2FE5E72F77F1BE00CD99E6 /* ObsidianParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ObsidianParser;
+		};
+		3D2FE5E92F77F20300CD99E6 /* ObsidianParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ObsidianParser;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3D2FE5B02F77EEEB00CD99E6 /* Project object */;
 }
