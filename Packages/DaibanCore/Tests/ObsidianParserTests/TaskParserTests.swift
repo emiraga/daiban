@@ -100,7 +100,7 @@ struct TaskParserTests {
         ("\u{23EB}", TaskPriority.high),
         ("\u{1F53C}", TaskPriority.medium),
         ("\u{1F53D}", TaskPriority.low),
-        ("\u{2B07}\u{FE0F}", TaskPriority.lowest),
+        ("\u{23EC}", TaskPriority.lowest),
     ])
     func priorities(emoji: String, expected: TaskPriority) {
         let line = "- [ ] Task \(emoji)"

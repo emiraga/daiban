@@ -20,10 +20,10 @@ struct TaskRowView: View {
                     .foregroundStyle(task.status.isComplete ? .secondary : .primary)
 
                 HStack(spacing: 12) {
-                    if let priority = task.priority {
-                        Text(priority.label)
+                    if task.priority != .normal {
+                        Text(task.priority.label)
                             .font(.caption)
-                            .foregroundStyle(priority.color)
+                            .foregroundStyle(task.priority.color)
                     }
 
                     if let due = task.dueDate {
@@ -72,6 +72,7 @@ private extension TaskPriority {
         case .highest: "Highest"
         case .high: "High"
         case .medium: "Medium"
+        case .normal: "Normal"
         case .low: "Low"
         case .lowest: "Lowest"
         }
@@ -81,6 +82,7 @@ private extension TaskPriority {
         switch self {
         case .highest, .high: .red
         case .medium: .orange
+        case .normal: .secondary
         case .low, .lowest: .blue
         }
     }

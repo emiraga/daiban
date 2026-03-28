@@ -39,8 +39,9 @@ public enum TaskPriority: Int, Comparable, Sendable {
     case highest = 0
     case high = 1
     case medium = 2
-    case low = 3
-    case lowest = 4
+    case normal = 3
+    case low = 4
+    case lowest = 5
 
     public static func < (lhs: TaskPriority, rhs: TaskPriority) -> Bool {
         lhs.rawValue < rhs.rawValue
@@ -59,7 +60,7 @@ public struct ObsidianTask: Equatable, Sendable, Identifiable {
     public let id: String
     public let description: String
     public var status: TaskStatus
-    public let priority: TaskPriority?
+    public let priority: TaskPriority
     public let dueDate: Date?
     public let scheduledDate: Date?
     public let startDate: Date?
@@ -80,7 +81,7 @@ public struct ObsidianTask: Equatable, Sendable, Identifiable {
     public init(
         description: String,
         status: TaskStatus,
-        priority: TaskPriority? = nil,
+        priority: TaskPriority = .normal,
         dueDate: Date? = nil,
         scheduledDate: Date? = nil,
         startDate: Date? = nil,

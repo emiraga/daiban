@@ -15,10 +15,10 @@ public struct TaskParser: Sendable {
     private static let startDatePattern = #/🛫\s*(\d{4}-\d{2}-\d{2})/#
     private static let createdDatePattern = #/➕\s*(\d{4}-\d{2}-\d{2})/#
     private static let doneDatePattern = #/✅\s*(\d{4}-\d{2}-\d{2})/#
-    private static let recurrencePattern = #/🔁\s*(.+?)(?:\s*[📅⏳🛫➕✅⏫🔼🔽⬇🔺]|$)/#
+    private static let recurrencePattern = #/🔁\s*(.+?)(?:\s*[📅⏳🛫➕✅⏫🔼🔽⏬🔺]|$)/#
     private static let tagPattern = #/#([\w\/-]+)/#
     private static let dateFieldPattern = #/[📅⏳🛫➕✅]\s*\d{4}-\d{2}-\d{2}/#
-    private static let recurrenceFieldPattern = #/🔁\s*[^📅⏳🛫➕✅⏫🔼🔽⬇🔺]*/#
+    private static let recurrenceFieldPattern = #/🔁\s*[^📅⏳🛫➕✅⏫🔼🔽⏬🔺]*/#
     private static let tagFieldPattern = #/#[\w\/-]+/#
 
     public init() {}
@@ -69,13 +69,13 @@ public struct TaskParser: Sendable {
 
     // MARK: - Private
 
-    private static func parsePriority(_ body: String) -> TaskPriority? {
+    private static func parsePriority(_ body: String) -> TaskPriority {
         if body.contains("🔺") { return .highest }
         if body.contains("⏫") { return .high }
         if body.contains("🔼") { return .medium }
         if body.contains("🔽") { return .low }
-        if body.contains("⬇️") || body.contains("⬇") { return .lowest }
-        return nil
+        if body.contains("⏬") { return .lowest }
+        return .normal
     }
 
     private static func parseDate(_ body: String, pattern: some RegexComponent<(Substring, Substring)>) -> Date? {
@@ -97,7 +97,7 @@ public struct TaskParser: Sendable {
         var desc = body
 
         // Remove priority emojis
-        for emoji in ["🔺", "⏫", "🔼", "🔽", "⬇️", "⬇"] {
+        for emoji in ["🔺", "⏫", "🔼", "🔽", "⏬"] {
             desc = desc.replacingOccurrences(of: emoji, with: "")
         }
 

@@ -5,11 +5,17 @@ import ObsidianParser
 struct ContentView: View {
     @Bindable var store: VaultStore
     @State private var searchText = ""
-    @AppStorage("showCompleted") private var showCompleted = false
+    @AppStorage("selectedViewMode") private var selectedViewMode = ViewMode.todo
     @AppStorage("selectedGrouping") private var selectedGrouping = TaskGrouping.file
     @State private var showingFolderPicker = false
     @State private var showingSettings = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    enum ViewMode: String, CaseIterable {
+        case todo = "To Do"
+        case incomplete = "Incomplete"
+        case all = "All"
+    }
 
     enum TaskGrouping: String, CaseIterable {
         case file = "File"
@@ -18,8 +24,19 @@ struct ContentView: View {
         case priority = "Priority"
     }
 
+    private var baseTasks: [ObsidianTask] {
+        switch selectedViewMode {
+        case .todo:
+            return store.incompleteTasks
+        case .incomplete:
+            return store.incompleteTasks
+        case .all:
+            return store.tasks
+        }
+    }
+
     var filteredTasks: [ObsidianTask] {
-        let base = showCompleted ? store.tasks : store.incompleteTasks
+        let base = baseTasks
         guard !searchText.isEmpty else { return base }
         let query = searchText.lowercased()
         return base.filter {
@@ -30,6 +47,10 @@ struct ContentView: View {
     }
 
     var groupedTasks: [(String, [ObsidianTask])] {
+        if selectedViewMode == .todo {
+            return todoGroupedTasks
+        }
+
         let tasks = filteredTasks
         switch selectedGrouping {
         case .file:
@@ -40,14 +61,57 @@ struct ContentView: View {
         case .scheduledDate:
             return groupByDate(tasks, keyPath: \.scheduledDate, noDateLabel: "No scheduled date")
         case .priority:
-            return Dictionary(grouping: tasks) { task -> String in
-                task.priority?.label ?? "No priority"
-            }
-            .sorted { lhs, rhs in
-                let order = ["Highest", "High", "Medium", "Low", "Lowest", "No priority"]
-                return (order.firstIndex(of: lhs.key) ?? 99) < (order.firstIndex(of: rhs.key) ?? 99)
+            return groupByPriority(tasks)
+        }
+    }
+
+    /// To Do view: tasks due/scheduled today or earlier first, then undated tasks sorted by priority
+    private var todoGroupedTasks: [(String, [ObsidianTask])] {
+        let tasks = filteredTasks
+        let endOfToday = Calendar.current.startOfDay(for: Date()).addingTimeInterval(86400)
+
+        let datedTasks = tasks.filter { task in
+            if let due = task.dueDate, due < endOfToday { return true }
+            if let scheduled = task.scheduledDate, scheduled < endOfToday { return true }
+            return false
+        }.sorted { lhs, rhs in
+            let lhsDate = earliestRelevantDate(lhs) ?? .distantFuture
+            let rhsDate = earliestRelevantDate(rhs) ?? .distantFuture
+            if lhsDate != rhsDate { return lhsDate < rhsDate }
+            return lhs.priority < rhs.priority
+        }
+
+        let undatedTasks = tasks.filter { task in
+            task.dueDate == nil && task.scheduledDate == nil
+        }.sorted { lhs, rhs in
+            lhs.priority < rhs.priority
+        }
+
+        var groups: [(String, [ObsidianTask])] = []
+        if !datedTasks.isEmpty {
+            groups.append(("Due & Scheduled", datedTasks))
+        }
+
+        let priorityOrder: [(TaskPriority, String)] = [
+            (.highest, "Highest Priority"),
+            (.high, "High Priority"),
+            (.medium, "Medium Priority"),
+            (.normal, "Normal Priority"),
+            (.low, "Low Priority"),
+            (.lowest, "Lowest Priority"),
+        ]
+        for (priority, label) in priorityOrder {
+            let matching = undatedTasks.filter { $0.priority == priority }
+            if !matching.isEmpty {
+                groups.append((label, matching))
             }
         }
+
+        return groups
+    }
+
+    private func earliestRelevantDate(_ task: ObsidianTask) -> Date? {
+        [task.dueDate, task.scheduledDate].compactMap { $0 }.min()
     }
 
     private var isCompact: Bool {
@@ -101,23 +165,20 @@ struct ContentView: View {
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Menu {
-                            Section("Show") {
-                                Button {
-                                    showCompleted = false
-                                } label: {
-                                    Label("Incomplete (\(store.incompleteTasks.count))", systemImage: showCompleted ? "circle" : "checkmark.circle")
-                                }
-                                Button {
-                                    showCompleted = true
-                                } label: {
-                                    Label("All (\(store.tasks.count))", systemImage: showCompleted ? "checkmark.circle" : "circle")
+                            Section("View") {
+                                Picker("View", selection: $selectedViewMode) {
+                                    ForEach(ViewMode.allCases, id: \.self) { mode in
+                                        Text(mode.rawValue).tag(mode)
+                                    }
                                 }
                             }
 
-                            Section("Group By") {
-                                Picker("Group By", selection: $selectedGrouping) {
-                                    ForEach(TaskGrouping.allCases, id: \.self) { grouping in
-                                        Text(grouping.rawValue).tag(grouping)
+                            if selectedViewMode != .todo {
+                                Section("Group By") {
+                                    Picker("Group By", selection: $selectedGrouping) {
+                                        ForEach(TaskGrouping.allCases, id: \.self) { grouping in
+                                            Text(grouping.rawValue).tag(grouping)
+                                        }
                                     }
                                 }
                             }
@@ -162,23 +223,24 @@ struct ContentView: View {
     private var sidebar: some View {
         List {
             Section("View") {
-                Label("Incomplete (\(store.incompleteTasks.count))", systemImage: "circle")
-                    .onTapGesture { showCompleted = false }
-                    .foregroundStyle(!showCompleted ? .primary : .secondary)
-
-                Label("All (\(store.tasks.count))", systemImage: "list.bullet")
-                    .onTapGesture { showCompleted = true }
-                    .foregroundStyle(showCompleted ? .primary : .secondary)
+                ForEach(ViewMode.allCases, id: \.self) { mode in
+                    let count = taskCount(for: mode)
+                    Label("\(mode.rawValue) (\(count))", systemImage: icon(for: mode))
+                        .onTapGesture { selectedViewMode = mode }
+                        .foregroundStyle(selectedViewMode == mode ? .primary : .secondary)
+                }
             }
 
-            Section("Group By") {
-                Picker("Grouping", selection: $selectedGrouping) {
-                    ForEach(TaskGrouping.allCases, id: \.self) { grouping in
-                        Text(grouping.rawValue).tag(grouping)
+            if selectedViewMode != .todo {
+                Section("Group By") {
+                    Picker("Grouping", selection: $selectedGrouping) {
+                        ForEach(TaskGrouping.allCases, id: \.self) { grouping in
+                            Text(grouping.rawValue).tag(grouping)
+                        }
                     }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
                 }
-                .pickerStyle(.inline)
-                .labelsHidden()
             }
 
             Section {
@@ -230,6 +292,8 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Helpers
+
     private func groupByDate(_ tasks: [ObsidianTask], keyPath: KeyPath<ObsidianTask, Date?>, noDateLabel: String) -> [(String, [ObsidianTask])] {
         Dictionary(grouping: tasks) { task -> String in
             if let date = task[keyPath: keyPath] {
@@ -241,6 +305,31 @@ struct ContentView: View {
             if lhs.key == noDateLabel { return false }
             if rhs.key == noDateLabel { return true }
             return lhs.key < rhs.key
+        }
+    }
+
+    private func groupByPriority(_ tasks: [ObsidianTask]) -> [(String, [ObsidianTask])] {
+        Dictionary(grouping: tasks) { task -> String in
+            task.priority.label
+        }
+        .sorted { lhs, rhs in
+            let order = ["Highest", "High", "Medium", "Normal", "Low", "Lowest"]
+            return (order.firstIndex(of: lhs.key) ?? 99) < (order.firstIndex(of: rhs.key) ?? 99)
+        }
+    }
+
+    private func taskCount(for mode: ViewMode) -> Int {
+        switch mode {
+        case .todo, .incomplete: store.incompleteTasks.count
+        case .all: store.tasks.count
+        }
+    }
+
+    private func icon(for mode: ViewMode) -> String {
+        switch mode {
+        case .todo: "star.circle"
+        case .incomplete: "circle"
+        case .all: "list.bullet"
         }
     }
 
@@ -276,6 +365,7 @@ private extension TaskPriority {
         case .highest: "Highest"
         case .high: "High"
         case .medium: "Medium"
+        case .normal: "Normal"
         case .low: "Low"
         case .lowest: "Lowest"
         }
