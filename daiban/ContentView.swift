@@ -9,6 +9,7 @@ struct ContentView: View {
     @AppStorage("selectedGrouping") private var selectedGrouping = TaskGrouping.file
     @State private var showingFolderPicker = false
     @State private var showingSettings = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     enum TaskGrouping: String, CaseIterable {
         case file = "File"
@@ -49,17 +50,18 @@ struct ContentView: View {
         }
     }
 
+    private var isCompact: Bool {
+        horizontalSizeClass == .compact
+    }
+
     var body: some View {
-        NavigationSplitView {
-            sidebar
-        } detail: {
+        Group {
             if store.hasVault {
-                taskList
+                connectedView
             } else {
                 welcomeView
             }
         }
-        .searchable(text: $searchText, prompt: "Filter tasks")
         .fileImporter(
             isPresented: $showingFolderPicker,
             allowedContentTypes: [.folder],
@@ -80,51 +82,129 @@ struct ContentView: View {
         #endif
     }
 
-    private var sidebar: some View {
-        List {
-            if store.hasVault {
-                Section("View") {
-                    Label("Incomplete (\(store.incompleteTasks.count))", systemImage: "circle")
-                        .onTapGesture { showCompleted = false }
-                        .foregroundStyle(!showCompleted ? .primary : .secondary)
+    @ViewBuilder
+    private var connectedView: some View {
+        if isCompact {
+            compactView
+        } else {
+            regularView
+        }
+    }
 
-                    Label("All (\(store.tasks.count))", systemImage: "list.bullet")
-                        .onTapGesture { showCompleted = true }
-                        .foregroundStyle(showCompleted ? .primary : .secondary)
-                }
+    // MARK: - Compact layout (iPhone)
 
-                Section("Group By") {
-                    Picker("Grouping", selection: $selectedGrouping) {
-                        ForEach(TaskGrouping.allCases, id: \.self) { grouping in
-                            Text(grouping.rawValue).tag(grouping)
+    private var compactView: some View {
+        NavigationStack {
+            taskList
+                .navigationTitle("Daiban")
+                .searchable(text: $searchText, prompt: "Filter tasks")
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Menu {
+                            Section("Show") {
+                                Button {
+                                    showCompleted = false
+                                } label: {
+                                    Label("Incomplete (\(store.incompleteTasks.count))", systemImage: showCompleted ? "circle" : "checkmark.circle")
+                                }
+                                Button {
+                                    showCompleted = true
+                                } label: {
+                                    Label("All (\(store.tasks.count))", systemImage: showCompleted ? "checkmark.circle" : "circle")
+                                }
+                            }
+
+                            Section("Group By") {
+                                Picker("Group By", selection: $selectedGrouping) {
+                                    ForEach(TaskGrouping.allCases, id: \.self) { grouping in
+                                        Text(grouping.rawValue).tag(grouping)
+                                    }
+                                }
+                            }
+                        } label: {
+                            Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
                         }
                     }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
-                }
 
-                Section {
-                    Button("Reload", systemImage: "arrow.clockwise") {
-                        store.reload()
+                    ToolbarItem(placement: .secondaryAction) {
+                        Menu {
+                            Button("Reload", systemImage: "arrow.clockwise") {
+                                store.reload()
+                            }
+                            Button("Change Vault", systemImage: "folder") {
+                                showingFolderPicker = true
+                            }
+                            Button("Settings", systemImage: "gear") {
+                                showingSettings = true
+                            }
+                            Button("Disconnect Vault", systemImage: "xmark.circle", role: .destructive) {
+                                store.disconnectVault()
+                            }
+                        } label: {
+                            Label("More", systemImage: "ellipsis.circle")
+                        }
                     }
-                    Button("Change Vault", systemImage: "folder") {
-                        showingFolderPicker = true
+                }
+        }
+    }
+
+    // MARK: - Regular layout (macOS / iPad)
+
+    private var regularView: some View {
+        NavigationSplitView {
+            sidebar
+        } detail: {
+            taskList
+        }
+        .searchable(text: $searchText, prompt: "Filter tasks")
+    }
+
+    private var sidebar: some View {
+        List {
+            Section("View") {
+                Label("Incomplete (\(store.incompleteTasks.count))", systemImage: "circle")
+                    .onTapGesture { showCompleted = false }
+                    .foregroundStyle(!showCompleted ? .primary : .secondary)
+
+                Label("All (\(store.tasks.count))", systemImage: "list.bullet")
+                    .onTapGesture { showCompleted = true }
+                    .foregroundStyle(showCompleted ? .primary : .secondary)
+            }
+
+            Section("Group By") {
+                Picker("Grouping", selection: $selectedGrouping) {
+                    ForEach(TaskGrouping.allCases, id: \.self) { grouping in
+                        Text(grouping.rawValue).tag(grouping)
                     }
-                    #if os(iOS)
-                    Button("Settings", systemImage: "gear") {
-                        showingSettings = true
-                    }
-                    #endif
-                    Button("Disconnect Vault", systemImage: "xmark.circle", role: .destructive) {
-                        store.disconnectVault()
-                    }
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+            }
+
+            Section {
+                Button("Reload", systemImage: "arrow.clockwise") {
+                    store.reload()
+                }
+                Button("Change Vault", systemImage: "folder") {
+                    showingFolderPicker = true
+                }
+                #if os(iOS)
+                Button("Settings", systemImage: "gear") {
+                    showingSettings = true
+                }
+                #endif
+                Button("Disconnect Vault", systemImage: "xmark.circle", role: .destructive) {
+                    store.disconnectVault()
                 }
             }
         }
+        .navigationTitle("Daiban")
         #if os(macOS)
         .navigationSplitViewColumnWidth(min: 180, ideal: 220)
         #endif
     }
+
+    // MARK: - Shared views
 
     private var taskList: some View {
         Group {
@@ -148,7 +228,6 @@ struct ContentView: View {
                 }
             }
         }
-        .navigationTitle("Daiban")
     }
 
     private func groupByDate(_ tasks: [ObsidianTask], keyPath: KeyPath<ObsidianTask, Date?>, noDateLabel: String) -> [(String, [ObsidianTask])] {
@@ -166,15 +245,18 @@ struct ContentView: View {
     }
 
     private var welcomeView: some View {
-        ContentUnavailableView {
-            Label("Welcome to Daiban", systemImage: "checkmark.circle")
-        } description: {
-            Text("Select your Obsidian vault to get started")
-        } actions: {
-            Button("Open Vault") {
-                showingFolderPicker = true
+        NavigationStack {
+            ContentUnavailableView {
+                Label("Welcome to Daiban", systemImage: "checkmark.circle")
+            } description: {
+                Text("Select your Obsidian vault to get started")
+            } actions: {
+                Button("Open Vault") {
+                    showingFolderPicker = true
+                }
+                .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
+            .navigationTitle("Daiban")
         }
     }
 
