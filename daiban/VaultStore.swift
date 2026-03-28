@@ -1,14 +1,11 @@
 import Foundation
 import ObsidianParser
-#if os(macOS)
-import AppKit
-#endif
 
 @Observable
 final class VaultStore {
     private(set) var tasks: [ObsidianTask] = []
     private(set) var isLoading = false
-    private(set) var error: String?
+    var error: String?
     private(set) var vaultURL: URL?
     private(set) var dailyNotesConfig: DailyNotesConfig?
 
@@ -50,20 +47,12 @@ final class VaultStore {
         restoreBookmark()
     }
 
-    func selectVault() {
-        #if os(macOS)
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.message = "Select your Obsidian vault folder"
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+    /// Called by the view layer after the user picks a folder via .fileImporter
+    func setVault(url: URL) {
         saveBookmark(for: url)
         vaultURL = url
         refreshDailyNotesConfig()
         reload()
-        #endif
     }
 
     func reload() {
@@ -105,6 +94,9 @@ final class VaultStore {
     }
 
     func disconnectVault() {
+        if let url = vaultURL {
+            url.stopAccessingSecurityScopedResource()
+        }
         UserDefaults.standard.removeObject(forKey: Self.bookmarkKey)
         vaultURL = nil
         tasks = []
@@ -129,11 +121,19 @@ final class VaultStore {
 
     private func saveBookmark(for url: URL) {
         do {
+            #if os(macOS)
             let data = try url.bookmarkData(
                 options: .withSecurityScope,
                 includingResourceValuesForKeys: nil,
                 relativeTo: nil
             )
+            #else
+            let data = try url.bookmarkData(
+                options: [],
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            )
+            #endif
             UserDefaults.standard.set(data, forKey: Self.bookmarkKey)
         } catch {
             self.error = "Failed to save bookmark: \(error.localizedDescription)"
@@ -144,12 +144,21 @@ final class VaultStore {
         guard let data = UserDefaults.standard.data(forKey: Self.bookmarkKey) else { return }
         do {
             var isStale = false
+            #if os(macOS)
             let url = try URL(
                 resolvingBookmarkData: data,
                 options: .withSecurityScope,
                 relativeTo: nil,
                 bookmarkDataIsStale: &isStale
             )
+            #else
+            let url = try URL(
+                resolvingBookmarkData: data,
+                options: [],
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            )
+            #endif
             guard url.startAccessingSecurityScopedResource() else { return }
             vaultURL = url
             if isStale {

@@ -54,11 +54,13 @@ struct TaskRowView: View {
 
             Spacer()
 
+            #if os(macOS)
             Text(task.filePath)
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
                 .truncationMode(.middle)
+            #endif
         }
         .padding(.vertical, 4)
     }

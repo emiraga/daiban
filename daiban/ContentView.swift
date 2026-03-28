@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import ObsidianParser
 
 struct ContentView: View {
@@ -6,6 +7,8 @@ struct ContentView: View {
     @State private var searchText = ""
     @AppStorage("showCompleted") private var showCompleted = false
     @AppStorage("selectedGrouping") private var selectedGrouping = TaskGrouping.file
+    @State private var showingFolderPicker = false
+    @State private var showingSettings = false
 
     enum TaskGrouping: String, CaseIterable {
         case file = "File"
@@ -57,6 +60,24 @@ struct ContentView: View {
             }
         }
         .searchable(text: $searchText, prompt: "Filter tasks")
+        .fileImporter(
+            isPresented: $showingFolderPicker,
+            allowedContentTypes: [.folder],
+            onCompletion: handleFolderSelection
+        )
+        #if os(iOS)
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                SettingsView(store: store)
+                    .navigationTitle("Settings")
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showingSettings = false }
+                        }
+                    }
+            }
+        }
+        #endif
     }
 
     private var sidebar: some View {
@@ -87,15 +108,22 @@ struct ContentView: View {
                         store.reload()
                     }
                     Button("Change Vault", systemImage: "folder") {
-                        store.selectVault()
+                        showingFolderPicker = true
                     }
+                    #if os(iOS)
+                    Button("Settings", systemImage: "gear") {
+                        showingSettings = true
+                    }
+                    #endif
                     Button("Disconnect Vault", systemImage: "xmark.circle", role: .destructive) {
                         store.disconnectVault()
                     }
                 }
             }
         }
+        #if os(macOS)
         .navigationSplitViewColumnWidth(min: 180, ideal: 220)
+        #endif
     }
 
     private var taskList: some View {
@@ -144,9 +172,18 @@ struct ContentView: View {
             Text("Select your Obsidian vault to get started")
         } actions: {
             Button("Open Vault") {
-                store.selectVault()
+                showingFolderPicker = true
             }
             .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private func handleFolderSelection(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            store.setVault(url: url)
+        case .failure(let error):
+            store.error = error.localizedDescription
         }
     }
 }
