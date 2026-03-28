@@ -26,6 +26,15 @@ struct SettingsView: View {
                     }
                 }
             }
+
+            Section("Appearance") {
+                Picker("Theme", selection: $store.themePreference) {
+                    ForEach(ThemePreference.allCases, id: \.self) { preference in
+                        Text(preference.rawValue).tag(preference)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
         }
         .formStyle(.grouped)
         #if os(macOS)

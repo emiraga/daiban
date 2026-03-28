@@ -1,6 +1,12 @@
 import Foundation
 import ObsidianParser
 
+enum ThemePreference: String, CaseIterable {
+    case system = "Use System Theme"
+    case light = "Always Use Light Theme"
+    case dark = "Always Use Dark Theme"
+}
+
 @Observable
 final class VaultStore {
     private(set) var tasks: [ObsidianTask] = []
@@ -20,6 +26,12 @@ final class VaultStore {
         didSet {
             UserDefaults.standard.set(dailyNoteDateTarget.rawValue, forKey: "dailyNoteDateTarget")
             reload()
+        }
+    }
+
+    var themePreference: ThemePreference {
+        didSet {
+            UserDefaults.standard.set(themePreference.rawValue, forKey: "themePreference")
         }
     }
 
@@ -44,6 +56,8 @@ final class VaultStore {
         self.useDailyNoteDate = UserDefaults.standard.bool(forKey: "useDailyNoteDate")
         let savedTarget = UserDefaults.standard.string(forKey: "dailyNoteDateTarget")
         self.dailyNoteDateTarget = savedTarget.flatMap(DailyNoteDateTarget.init(rawValue:)) ?? .dueDate
+        let savedTheme = UserDefaults.standard.string(forKey: "themePreference")
+        self.themePreference = savedTheme.flatMap(ThemePreference.init(rawValue:)) ?? .system
         restoreBookmark()
     }
 
