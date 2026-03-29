@@ -4,16 +4,19 @@ import ObsidianParser
 struct TaskRowView: View {
     @Environment(\.obsidianVaultName) private var vaultName
     let task: ObsidianTask
+    var readOnly: Bool = false
+    var isPending: Bool = false
     let onToggle: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             Button(action: onToggle) {
-                Image(systemName: task.status.isComplete ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(task.status.isComplete ? .green : .secondary)
+                Image(systemName: checkboxIcon)
+                    .foregroundStyle(checkboxColor)
                     .font(.title3)
             }
             .buttonStyle(.plain)
+            .disabled(readOnly)
 
             VStack(alignment: .leading, spacing: 4) {
                 MarkdownText(task.description)
@@ -68,6 +71,20 @@ struct TaskRowView: View {
             #endif
         }
         .padding(.vertical, 4)
+    }
+
+    private var checkboxIcon: String {
+        if isPending {
+            return "clock.circle.fill"
+        }
+        return task.status.isComplete ? "checkmark.circle.fill" : "circle"
+    }
+
+    private var checkboxColor: Color {
+        if isPending {
+            return .orange
+        }
+        return task.status.isComplete ? .green : .secondary
     }
 }
 

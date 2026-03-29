@@ -9,6 +9,7 @@ struct ContentView: View {
     @AppStorage("selectedGrouping") private var selectedGrouping = TaskGrouping.file
     @State private var showingFolderPicker = false
     @State private var showingSettings = false
+    @State private var showingPendingUpdates = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     enum ViewMode: String, CaseIterable {
@@ -131,6 +132,16 @@ struct ContentView: View {
             allowedContentTypes: [.folder],
             onCompletion: handleFolderSelection
         )
+        .sheet(isPresented: $showingPendingUpdates) {
+            NavigationStack {
+                PendingUpdatesView(store: store)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showingPendingUpdates = false }
+                        }
+                    }
+            }
+        }
         #if os(iOS)
         .sheet(isPresented: $showingSettings) {
             NavigationStack {
@@ -184,6 +195,12 @@ struct ContentView: View {
                             }
                         } label: {
                             Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
+                        }
+                    }
+
+                    if store.writeMode == .batched {
+                        ToolbarItem(placement: .primaryAction) {
+                            pendingUpdatesButton
                         }
                     }
 
@@ -243,6 +260,17 @@ struct ContentView: View {
                 }
             }
 
+            if store.writeMode == .batched {
+                Section {
+                    Button {
+                        showingPendingUpdates = true
+                    } label: {
+                        Label("Pending Updates", systemImage: "tray.full")
+                            .badge(store.pendingUpdates.count)
+                    }
+                }
+            }
+
             Section {
                 Button("Reload", systemImage: "arrow.clockwise") {
                     store.reload()
@@ -285,7 +313,11 @@ struct ContentView: View {
                     ForEach(groupedTasks, id: \.0) { group, tasks in
                         Section(group) {
                             ForEach(tasks) { task in
-                                TaskRowView(task: task) {
+                                TaskRowView(
+                                    task: task,
+                                    readOnly: store.writeMode == .disabled,
+                                    isPending: store.pendingUpdates.contains { $0.task.id == task.id }
+                                ) {
                                     store.toggleCompletion(task)
                                 }
                             }
@@ -293,6 +325,25 @@ struct ContentView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var pendingUpdatesButton: some View {
+        Button {
+            showingPendingUpdates = true
+        } label: {
+            Image(systemName: "tray.full")
+                .overlay(alignment: .topTrailing) {
+                    if !store.pendingUpdates.isEmpty {
+                        Text("\(store.pendingUpdates.count)")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                            .padding(3)
+                            .background(.red, in: .circle)
+                            .offset(x: 6, y: -6)
+                    }
+                }
         }
     }
 
@@ -324,7 +375,8 @@ struct ContentView: View {
 
     private func taskCount(for mode: ViewMode) -> Int {
         switch mode {
-        case .todo, .incomplete: store.incompleteTasks.count
+        case .todo: todoGroupedTasks.reduce(0) { $0 + $1.1.count }
+        case .incomplete: store.incompleteTasks.count
         case .all: store.tasks.count
         }
     }

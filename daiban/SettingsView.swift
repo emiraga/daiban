@@ -31,6 +31,30 @@ struct SettingsView: View {
                 TextField("Vault name", text: $store.vaultNameOverride, prompt: Text(store.vaultURL?.lastPathComponent ?? "Vault name"))
             }
 
+            Section("Updates") {
+                Picker("Write Mode", selection: $store.writeMode) {
+                    ForEach(WriteMode.allCases, id: \.self) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.menu)
+
+                switch store.writeMode {
+                case .disabled:
+                    Text("Task changes will not be written to vault files.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                case .immediate:
+                    Text("Task changes are written to vault files immediately.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                case .batched:
+                    Text("Task changes are queued and written when you apply them.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             Section("Appearance") {
                 Picker("Theme", selection: $store.themePreference) {
                     ForEach(ThemePreference.allCases, id: \.self) { preference in

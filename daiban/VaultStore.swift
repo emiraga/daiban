@@ -7,6 +7,20 @@ enum ThemePreference: String, CaseIterable {
     case dark = "Always Use Dark Theme"
 }
 
+enum WriteMode: String, CaseIterable {
+    case disabled = "Read Only"
+    case immediate = "Immediate"
+    case batched = "Batched"
+}
+
+struct PendingUpdate: Identifiable, Equatable {
+    let id = UUID()
+    let task: ObsidianTask
+    /// The new line content after toggling
+    let newLine: String
+    let timestamp: Date
+}
+
 @Observable
 final class VaultStore {
     private(set) var tasks: [ObsidianTask] = [] {
@@ -44,6 +58,14 @@ final class VaultStore {
         }
     }
 
+    var writeMode: WriteMode {
+        didSet {
+            UserDefaults.standard.set(writeMode.rawValue, forKey: "writeMode")
+        }
+    }
+
+    private(set) var pendingUpdates: [PendingUpdate] = []
+
     private let scanner = VaultScanner()
     private let writer = TaskWriter()
     private var fileWatcher: FileWatcher?
@@ -71,6 +93,8 @@ final class VaultStore {
         self.dailyNoteDateTarget = savedTarget.flatMap(DailyNoteDateTarget.init(rawValue:)) ?? .dueDate
         let savedTheme = UserDefaults.standard.string(forKey: "themePreference")
         self.themePreference = savedTheme.flatMap(ThemePreference.init(rawValue:)) ?? .system
+        let savedWriteMode = UserDefaults.standard.string(forKey: "writeMode")
+        self.writeMode = savedWriteMode.flatMap(WriteMode.init(rawValue:)) ?? .disabled
         restoreBookmark()
     }
 
@@ -111,6 +135,52 @@ final class VaultStore {
     }
 
     func toggleCompletion(_ task: ObsidianTask) {
+        switch writeMode {
+        case .disabled:
+            return
+        case .immediate:
+            writeToggle(task)
+        case .batched:
+            let newLine = writer.toggleCompletion(task)
+            // If there's already a pending update for this task, remove it (user toggled back)
+            if let existingIndex = pendingUpdates.firstIndex(where: { $0.task.id == task.id }) {
+                pendingUpdates.remove(at: existingIndex)
+            } else {
+                pendingUpdates.append(PendingUpdate(task: task, newLine: newLine, timestamp: Date()))
+            }
+        }
+    }
+
+    func applyPendingUpdates() throws {
+        guard let vaultURL else { return }
+
+        // Group updates by file to minimize file reads/writes
+        let updatesByFile = Dictionary(grouping: pendingUpdates, by: \.task.filePath)
+
+        for (filePath, updates) in updatesByFile {
+            let fileURL = vaultURL.appendingPathComponent(filePath)
+            var content = try String(contentsOf: fileURL, encoding: .utf8)
+            // Apply updates in reverse line order so line numbers stay valid
+            let sorted = updates.sorted { $0.task.lineNumber > $1.task.lineNumber }
+            for update in sorted {
+                content = writer.replaceLine(in: content, at: update.task.lineNumber, with: update.newLine)
+            }
+            try coordinatedWrite(content, to: fileURL)
+        }
+
+        pendingUpdates.removeAll()
+        reload()
+    }
+
+    func discardPendingUpdates() {
+        pendingUpdates.removeAll()
+    }
+
+    func discardPendingUpdate(_ update: PendingUpdate) {
+        pendingUpdates.removeAll { $0.id == update.id }
+    }
+
+    private func writeToggle(_ task: ObsidianTask) {
         guard let vaultURL else { return }
 
         let fileURL = vaultURL.appendingPathComponent(task.filePath)
@@ -118,11 +188,26 @@ final class VaultStore {
             let content = try String(contentsOf: fileURL, encoding: .utf8)
             let newLine = writer.toggleCompletion(task)
             let newContent = writer.replaceLine(in: content, at: task.lineNumber, with: newLine)
-            try newContent.write(to: fileURL, atomically: true, encoding: .utf8)
+            try coordinatedWrite(newContent, to: fileURL)
             reload()
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    private func coordinatedWrite(_ content: String, to fileURL: URL) throws {
+        var coordinatorError: NSError?
+        var writeError: Error?
+        let coordinator = NSFileCoordinator()
+        coordinator.coordinate(writingItemAt: fileURL, options: .forReplacing, error: &coordinatorError) { url in
+            do {
+                try content.write(to: url, atomically: false, encoding: .utf8)
+            } catch {
+                writeError = error
+            }
+        }
+        if let coordinatorError { throw coordinatorError }
+        if let writeError { throw writeError }
     }
 
     func disconnectVault() {
