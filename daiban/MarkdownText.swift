@@ -12,8 +12,21 @@ struct MarkdownText: View {
         self.markdown = markdown
     }
 
+    private static let cache = NSCache<NSString, CacheEntry>()
+
+    private final class CacheEntry {
+        let value: AttributedString
+        init(_ value: AttributedString) { self.value = value }
+    }
+
     private var content: AttributedString {
-        Self.parse(markdown, vaultName: vaultName, colorScheme: colorScheme)
+        let key = "\(markdown)\0\(vaultName)\0\(colorScheme)" as NSString
+        if let cached = Self.cache.object(forKey: key) {
+            return cached.value
+        }
+        let result = Self.parse(markdown, vaultName: vaultName, colorScheme: colorScheme)
+        Self.cache.setObject(CacheEntry(result), forKey: key)
+        return result
     }
 
     /// Converts Obsidian-style `[[Page|text]]` or `[[Page]]` links into standard markdown links
