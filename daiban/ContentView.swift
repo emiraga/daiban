@@ -271,6 +271,7 @@ struct ContentView: View {
                     } label: {
                         Label("\(mode.rawValue) (\(count))", systemImage: icon(for: mode))
                             .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 4)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
