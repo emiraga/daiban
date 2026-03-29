@@ -14,6 +14,7 @@ struct ContentView: View {
 
     enum ViewMode: String, CaseIterable {
         case todo = "To Do"
+        case upcoming = "Upcoming"
         case incomplete = "Incomplete"
         case all = "All"
     }
@@ -29,6 +30,13 @@ struct ContentView: View {
         switch selectedViewMode {
         case .todo:
             return store.incompleteTasks
+        case .upcoming:
+            let startOfTomorrow = Calendar.current.startOfDay(for: Date()).addingTimeInterval(86400)
+            return store.incompleteTasks.filter { task in
+                if let due = task.dueDate, due >= startOfTomorrow { return true }
+                if let scheduled = task.scheduledDate, scheduled >= startOfTomorrow { return true }
+                return false
+            }
         case .incomplete:
             return store.incompleteTasks
         case .all:
@@ -51,7 +59,6 @@ struct ContentView: View {
         if selectedViewMode == .todo {
             return todoGroupedTasks
         }
-
         let tasks = filteredTasks
         switch selectedGrouping {
         case .file:
@@ -390,15 +397,26 @@ struct ContentView: View {
 
     private func taskCount(for mode: ViewMode) -> Int {
         switch mode {
-        case .todo: todoFilteredTasks(from: store.incompleteTasks).count
-        case .incomplete: store.incompleteTasks.count
-        case .all: store.tasks.count
+        case .todo:
+            return todoFilteredTasks(from: store.incompleteTasks).count
+        case .upcoming:
+            let startOfTomorrow = Calendar.current.startOfDay(for: Date()).addingTimeInterval(86400)
+            return store.incompleteTasks.filter { task in
+                if let due = task.dueDate, due >= startOfTomorrow { return true }
+                if let scheduled = task.scheduledDate, scheduled >= startOfTomorrow { return true }
+                return false
+            }.count
+        case .incomplete:
+            return store.incompleteTasks.count
+        case .all:
+            return store.tasks.count
         }
     }
 
     private func icon(for mode: ViewMode) -> String {
         switch mode {
         case .todo: "star.circle"
+        case .upcoming: "calendar"
         case .incomplete: "circle"
         case .all: "list.bullet"
         }
