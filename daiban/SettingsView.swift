@@ -1,5 +1,5 @@
-import SwiftUI
 import ObsidianParser
+import SwiftUI
 
 struct SettingsView: View {
     @Bindable var store: VaultStore
@@ -18,17 +18,26 @@ struct SettingsView: View {
                     .pickerStyle(.menu)
 
                     if let config = store.dailyNotesConfig {
-                        LabeledContent("Detected folder", value: config.folder.isEmpty ? "/" : config.folder)
+                        LabeledContent(
+                            "Detected folder", value: config.folder.isEmpty ? "/" : config.folder)
                         LabeledContent("Detected format", value: config.dateFormat)
                     } else if store.hasVault {
-                        Label("No daily notes plugin config found in vault", systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.orange)
+                        Label(
+                            "No daily notes plugin config found in vault",
+                            systemImage: "exclamationmark.triangle"
+                        )
+                        .foregroundStyle(.orange)
                     }
                 }
             }
 
             Section("Obsidian") {
-                TextField("Vault name", text: $store.vaultNameOverride, prompt: Text(store.vaultURL?.lastPathComponent ?? "Vault name"))
+                TextField(
+                    "Vault name", text: $store.vaultNameOverride,
+                    prompt: Text(store.vaultURL?.lastPathComponent ?? "Vault name"))
+                Text("Used for obsidian://open?vault=VAULT_NAME&file=FILE_NAME")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Updates") {
@@ -69,12 +78,17 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 case .openURL:
-                    TextField("URL Scheme", text: $store.postWriteURLScheme, prompt: Text("obsidian://"))
-                    Text("Opens the specified URL scheme after writing changes. Defaults to Obsidian.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    TextField(
+                        "URL Scheme", text: $store.postWriteURLScheme, prompt: Text("obsidian://"))
+                    Text(
+                        "Opens the specified URL scheme after writing changes. Defaults to Obsidian."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 case .runShortcut:
-                    TextField("Shortcut Name", text: $store.postWriteShortcutName, prompt: Text("My Shortcut"))
+                    TextField(
+                        "Shortcut Name", text: $store.postWriteShortcutName,
+                        prompt: Text("My Shortcut"))
                     Text("Runs the specified Shortcut after writing changes.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -95,13 +109,17 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 case .ignoreOlderThanWeek:
-                    Text("Completed tasks older than 1 week are hidden. Tasks without any dates are kept.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text(
+                        "Completed tasks older than 1 week are hidden. Tasks without any dates are kept."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 case .ignoreOlderThanWeekAndUndated:
-                    Text("Completed tasks older than 1 week and those without any dates are hidden.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text(
+                        "Completed tasks older than 1 week and those without any dates are hidden."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
             }
 
@@ -116,7 +134,7 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         #if os(macOS)
-        .frame(minWidth: 400, minHeight: 200)
+            .frame(minWidth: 400, minHeight: 200)
         #endif
     }
 }

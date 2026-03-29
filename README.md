@@ -9,6 +9,10 @@
 - write mode
  - read only, immediate, batched
 
+### Immediate bugs
+
+- post-write action should be hidden in read-only
+
 ### Planned features:
 
 - macos, ios, iwatch, app

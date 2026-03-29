@@ -1,6 +1,6 @@
+import ObsidianParser
 import SwiftUI
 import UniformTypeIdentifiers
-import ObsidianParser
 
 struct ContentView: View {
     @Bindable var store: VaultStore
@@ -53,8 +53,8 @@ struct ContentView: View {
         let query = searchText.lowercased()
         return base.filter {
             $0.description.lowercased().contains(query)
-            || $0.filePath.lowercased().contains(query)
-            || $0.tags.contains(where: { $0.lowercased().contains(query) })
+                || $0.filePath.lowercased().contains(query)
+                || $0.tags.contains(where: { $0.lowercased().contains(query) })
         }
     }
 
@@ -167,17 +167,17 @@ struct ContentView: View {
             }
         }
         #if os(iOS)
-        .sheet(isPresented: $showingSettings) {
-            NavigationStack {
-                SettingsView(store: store)
+            .sheet(isPresented: $showingSettings) {
+                NavigationStack {
+                    SettingsView(store: store)
                     .navigationTitle("Settings")
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Done") { showingSettings = false }
                         }
                     }
+                }
             }
-        }
         #endif
     }
 
@@ -197,7 +197,7 @@ struct ContentView: View {
             taskList
                 .navigationTitle("Daiban")
                 #if !os(macOS)
-                .navigationBarTitleDisplayMode(.inline)
+                    .navigationBarTitleDisplayMode(.inline)
                 #endif
                 .searchable(text: $searchText, prompt: "Filter tasks")
                 .toolbar {
@@ -237,17 +237,18 @@ struct ContentView: View {
                         }
                     }
                     ToolbarItem(placement: .secondaryAction) {
-                        Button("Change Vault", systemImage: "folder") {
-                            showingFolderPicker = true
-                        }
-                    }
-                    ToolbarItem(placement: .secondaryAction) {
                         Button("Settings", systemImage: "gear") {
                             showingSettings = true
                         }
                     }
                     ToolbarItem(placement: .secondaryAction) {
-                        Button("Disconnect Vault", systemImage: "xmark.circle", role: .destructive) {
+                        Button("Change Vault", systemImage: "folder") {
+                            showingFolderPicker = true
+                        }
+                    }
+                    ToolbarItem(placement: .secondaryAction) {
+                        Button("Disconnect Vault", systemImage: "xmark.circle", role: .destructive)
+                        {
                             store.disconnectVault()
                         }
                     }
@@ -311,18 +312,18 @@ struct ContentView: View {
                 Button("Reload", systemImage: "arrow.clockwise") {
                     store.reload()
                 }
+                #if os(macOS)
+                    SettingsLink {
+                        Label("Settings", systemImage: "gear")
+                    }
+                #else
+                    Button("Settings", systemImage: "gear") {
+                        showingSettings = true
+                    }
+                #endif
                 Button("Change Vault", systemImage: "folder") {
                     showingFolderPicker = true
                 }
-                #if os(macOS)
-                SettingsLink {
-                    Label("Settings", systemImage: "gear")
-                }
-                #else
-                Button("Settings", systemImage: "gear") {
-                    showingSettings = true
-                }
-                #endif
                 Button("Disconnect Vault", systemImage: "xmark.circle", role: .destructive) {
                     store.disconnectVault()
                 }
@@ -330,7 +331,7 @@ struct ContentView: View {
         }
         .navigationTitle("Daiban")
         #if os(macOS)
-        .navigationSplitViewColumnWidth(min: 180, ideal: 220)
+            .navigationSplitViewColumnWidth(min: 180, ideal: 220)
         #endif
     }
 
@@ -341,9 +342,12 @@ struct ContentView: View {
             if store.isLoading {
                 ProgressView("Scanning vault...")
             } else if let error = store.error {
-                ContentUnavailableView("Error", systemImage: "exclamationmark.triangle", description: Text(error))
+                ContentUnavailableView(
+                    "Error", systemImage: "exclamationmark.triangle", description: Text(error))
             } else if filteredTasks.isEmpty {
-                ContentUnavailableView("No Tasks", systemImage: "checkmark.circle", description: Text("No tasks found"))
+                ContentUnavailableView(
+                    "No Tasks", systemImage: "checkmark.circle", description: Text("No tasks found")
+                )
             } else {
                 List {
                     ForEach(groupedTasks, id: \.0) { group, tasks in
@@ -352,7 +356,9 @@ struct ContentView: View {
                                 TaskRowView(
                                     task: task,
                                     readOnly: store.writeMode == .disabled,
-                                    isPending: store.pendingUpdates.contains { $0.task.id == task.id }
+                                    isPending: store.pendingUpdates.contains {
+                                        $0.task.id == task.id
+                                    }
                                 ) {
                                     store.toggleCompletion(task)
                                 }
@@ -386,7 +392,9 @@ struct ContentView: View {
 
     // MARK: - Helpers
 
-    private func groupByDate(_ tasks: [ObsidianTask], keyPath: KeyPath<ObsidianTask, Date?>, noDateLabel: String) -> [(String, [ObsidianTask])] {
+    private func groupByDate(
+        _ tasks: [ObsidianTask], keyPath: KeyPath<ObsidianTask, Date?>, noDateLabel: String
+    ) -> [(String, [ObsidianTask])] {
         Dictionary(grouping: tasks) { task -> String in
             if let date = task[keyPath: keyPath] {
                 return date.formatted(date: .abbreviated, time: .omitted)
@@ -466,8 +474,8 @@ struct ContentView: View {
     }
 }
 
-private extension TaskPriority {
-    var label: String {
+extension TaskPriority {
+    fileprivate var label: String {
         switch self {
         case .highest: "Highest"
         case .high: "High"
