@@ -9,7 +9,10 @@ enum ThemePreference: String, CaseIterable {
 
 @Observable
 final class VaultStore {
-    private(set) var tasks: [ObsidianTask] = []
+    private(set) var tasks: [ObsidianTask] = [] {
+        didSet { recomputeFilteredTasks() }
+    }
+    private(set) var incompleteTasks: [ObsidianTask] = []
     private(set) var isLoading = false
     var error: String?
     private(set) var vaultURL: URL?
@@ -43,15 +46,12 @@ final class VaultStore {
 
     private let scanner = VaultScanner()
     private let writer = TaskWriter()
+    private var fileWatcher: FileWatcher?
 
     private static let bookmarkKey = "vaultBookmarkData"
 
-    var incompleteTasks: [ObsidianTask] {
-        tasks.filter { !$0.status.isComplete }
-    }
-
-    var completedTasks: [ObsidianTask] {
-        tasks.filter { $0.status.isComplete }
+    private func recomputeFilteredTasks() {
+        incompleteTasks = tasks.filter { !$0.status.isComplete }
     }
 
     var hasVault: Bool {
@@ -83,6 +83,7 @@ final class VaultStore {
         saveBookmark(for: url)
         vaultURL = url
         refreshDailyNotesConfig()
+        startWatching(url: url)
         reload()
     }
 
@@ -125,6 +126,8 @@ final class VaultStore {
     }
 
     func disconnectVault() {
+        fileWatcher?.stop()
+        fileWatcher = nil
         if let url = vaultURL {
             url.stopAccessingSecurityScopedResource()
         }
@@ -135,6 +138,15 @@ final class VaultStore {
     }
 
     // MARK: - Private
+
+    private func startWatching(url: URL) {
+        fileWatcher?.stop()
+        let watcher = FileWatcher { [weak self] in
+            self?.reload()
+        }
+        watcher.watch(directory: url)
+        fileWatcher = watcher
+    }
 
     private var scanOptions: ScanOptions {
         ScanOptions(dailyNoteDateTarget: useDailyNoteDate ? dailyNoteDateTarget : nil)
@@ -196,6 +208,7 @@ final class VaultStore {
                 saveBookmark(for: url)
             }
             refreshDailyNotesConfig()
+            startWatching(url: url)
             reload()
         } catch {
             self.error = "Failed to restore vault access: \(error.localizedDescription)"
