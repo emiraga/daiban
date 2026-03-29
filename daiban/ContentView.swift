@@ -338,6 +338,7 @@ struct ContentView: View {
                         }
                     }
                 }
+                .id(selectedViewMode)
             }
         }
     }
