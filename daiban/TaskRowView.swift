@@ -2,6 +2,7 @@ import SwiftUI
 import ObsidianParser
 
 struct TaskRowView: View {
+    @Environment(\.obsidianVaultName) private var vaultName
     let task: ObsidianTask
     let onToggle: () -> Void
 
@@ -55,11 +56,15 @@ struct TaskRowView: View {
             Spacer()
 
             #if os(macOS)
-            Text(task.filePath)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
-                .truncationMode(.middle)
+            let encoded = task.filePath.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? task.filePath
+            let encodedVault = vaultName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? vaultName
+            Link(destination: URL(string: "obsidian://open?vault=\(encodedVault)&file=\(encoded)")!) {
+                Text(task.filePath)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
             #endif
         }
         .padding(.vertical, 4)

@@ -27,6 +27,10 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Obsidian") {
+                TextField("Vault name", text: $store.vaultNameOverride, prompt: Text(store.vaultURL?.lastPathComponent ?? "Vault name"))
+            }
+
             Section("Appearance") {
                 Picker("Theme", selection: $store.themePreference) {
                     ForEach(ThemePreference.allCases, id: \.self) { preference in

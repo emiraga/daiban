@@ -35,6 +35,12 @@ final class VaultStore {
         }
     }
 
+    var vaultNameOverride: String {
+        didSet {
+            UserDefaults.standard.set(vaultNameOverride, forKey: "vaultNameOverride")
+        }
+    }
+
     private let scanner = VaultScanner()
     private let writer = TaskWriter()
 
@@ -52,7 +58,14 @@ final class VaultStore {
         vaultURL != nil
     }
 
+    var vaultName: String {
+        let override = vaultNameOverride.trimmingCharacters(in: .whitespaces)
+        if !override.isEmpty { return override }
+        return vaultURL?.lastPathComponent ?? ""
+    }
+
     init() {
+        self.vaultNameOverride = UserDefaults.standard.string(forKey: "vaultNameOverride") ?? ""
         self.useDailyNoteDate = UserDefaults.standard.bool(forKey: "useDailyNoteDate")
         let savedTarget = UserDefaults.standard.string(forKey: "dailyNoteDateTarget")
         self.dailyNoteDateTarget = savedTarget.flatMap(DailyNoteDateTarget.init(rawValue:)) ?? .dueDate

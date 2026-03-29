@@ -5,6 +5,7 @@ import SwiftUI
 /// Falls back to plain text if markdown parsing fails.
 struct MarkdownText: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.obsidianVaultName) private var vaultName
     let markdown: String
 
     init(_ markdown: String) {
@@ -12,12 +13,12 @@ struct MarkdownText: View {
     }
 
     private var content: AttributedString {
-        Self.parse(markdown, colorScheme: colorScheme)
+        Self.parse(markdown, vaultName: vaultName, colorScheme: colorScheme)
     }
 
     /// Converts Obsidian-style `[[Page|text]]` or `[[Page]]` links into standard markdown links
-    /// pointing at `obsidian://open?vault=SecondBrain&file=Page`.
-    private static func convertObsidianLinks(_ text: String) -> String {
+    /// pointing at `obsidian://open?vault={vaultName}&file=Page`.
+    private static func convertObsidianLinks(_ text: String, vaultName: String) -> String {
         // Matches [[Target|Display]] or [[Target]]
         let pattern = #"\[\[([^\]\|]+)(?:\|([^\]]+))?\]\]"#
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return text }
@@ -35,15 +36,16 @@ struct MarkdownText: View {
                 display = target
             }
             let encoded = target.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? target
-            let mdLink = "[\(display)](obsidian://open?vault=SecondBrain&file=\(encoded))"
+            let encodedVault = vaultName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? vaultName
+            let mdLink = "[\(display)](obsidian://open?vault=\(encodedVault)&file=\(encoded))"
             let fullRange = Range(match.range, in: result)!
             result.replaceSubrange(fullRange, with: mdLink)
         }
         return result
     }
 
-    private static func parse(_ markdown: String, colorScheme: ColorScheme) -> AttributedString {
-        let processed = convertObsidianLinks(markdown)
+    private static func parse(_ markdown: String, vaultName: String, colorScheme: ColorScheme) -> AttributedString {
+        let processed = convertObsidianLinks(markdown, vaultName: vaultName)
         var result: AttributedString
         if let attributed = try? AttributedString(markdown: processed, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
             result = attributed

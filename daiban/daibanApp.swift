@@ -15,6 +15,7 @@ struct DaibanApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(store: store)
+                .environment(\.obsidianVaultName, store.vaultName)
                 .preferredColorScheme(preferredColorScheme)
         }
         #if os(macOS)
