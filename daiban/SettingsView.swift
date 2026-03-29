@@ -55,6 +55,32 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Post-Write Action") {
+                Picker("Action", selection: $store.postWriteAction) {
+                    ForEach(PostWriteAction.allCases, id: \.self) { action in
+                        Text(action.rawValue).tag(action)
+                    }
+                }
+                .pickerStyle(.menu)
+
+                switch store.postWriteAction {
+                case .none:
+                    Text("No action will be performed after writing changes.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                case .openURL:
+                    TextField("URL Scheme", text: $store.postWriteURLScheme, prompt: Text("obsidian://"))
+                    Text("Opens the specified URL scheme after writing changes. Defaults to Obsidian.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                case .runShortcut:
+                    TextField("Shortcut Name", text: $store.postWriteShortcutName, prompt: Text("My Shortcut"))
+                    Text("Runs the specified Shortcut after writing changes.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             Section("Completed Tasks") {
                 Picker("Retention", selection: $store.completedTaskRetention) {
                     ForEach(CompletedTaskRetention.allCases, id: \.self) { retention in

@@ -1,5 +1,10 @@
 import Foundation
 import ObsidianParser
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 enum ThemePreference: String, CaseIterable {
     case system = "Use System Theme"
@@ -17,6 +22,12 @@ enum WriteMode: String, CaseIterable {
     case disabled = "Read Only"
     case immediate = "Immediate"
     case batched = "Batched"
+}
+
+enum PostWriteAction: String, CaseIterable {
+    case none = "None"
+    case openURL = "Open URL Scheme"
+    case runShortcut = "Run Shortcut"
 }
 
 struct PendingUpdate: Identifiable, Equatable {
@@ -77,6 +88,24 @@ final class VaultStore {
         }
     }
 
+    var postWriteAction: PostWriteAction {
+        didSet {
+            UserDefaults.standard.set(postWriteAction.rawValue, forKey: "postWriteAction")
+        }
+    }
+
+    var postWriteURLScheme: String {
+        didSet {
+            UserDefaults.standard.set(postWriteURLScheme, forKey: "postWriteURLScheme")
+        }
+    }
+
+    var postWriteShortcutName: String {
+        didSet {
+            UserDefaults.standard.set(postWriteShortcutName, forKey: "postWriteShortcutName")
+        }
+    }
+
     private(set) var pendingUpdates: [PendingUpdate] = []
 
     private let scanner = VaultScanner()
@@ -110,6 +139,10 @@ final class VaultStore {
         self.writeMode = savedWriteMode.flatMap(WriteMode.init(rawValue:)) ?? .disabled
         let savedRetention = UserDefaults.standard.string(forKey: "completedTaskRetention")
         self.completedTaskRetention = savedRetention.flatMap(CompletedTaskRetention.init(rawValue:)) ?? .ignoreOlderThanWeek
+        let savedPostWriteAction = UserDefaults.standard.string(forKey: "postWriteAction")
+        self.postWriteAction = savedPostWriteAction.flatMap(PostWriteAction.init(rawValue:)) ?? .none
+        self.postWriteURLScheme = UserDefaults.standard.string(forKey: "postWriteURLScheme") ?? "obsidian://"
+        self.postWriteShortcutName = UserDefaults.standard.string(forKey: "postWriteShortcutName") ?? ""
         restoreBookmark()
     }
 
@@ -209,6 +242,33 @@ final class VaultStore {
 
         pendingUpdates.removeAll()
         reload()
+        performPostWriteAction()
+    }
+
+    func performPostWriteAction() {
+        switch postWriteAction {
+        case .none:
+            return
+        case .openURL:
+            let scheme = postWriteURLScheme.trimmingCharacters(in: .whitespaces)
+            guard !scheme.isEmpty, let url = URL(string: scheme) else { return }
+            #if os(macOS)
+            NSWorkspace.shared.open(url)
+            #else
+            UIApplication.shared.open(url)
+            #endif
+        case .runShortcut:
+            let name = postWriteShortcutName.trimmingCharacters(in: .whitespaces)
+            guard !name.isEmpty,
+                  let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+                  let url = URL(string: "shortcuts://run-shortcut?name=\(encoded)")
+            else { return }
+            #if os(macOS)
+            NSWorkspace.shared.open(url)
+            #else
+            UIApplication.shared.open(url)
+            #endif
+        }
     }
 
     func discardPendingUpdates() {
@@ -229,6 +289,7 @@ final class VaultStore {
             let newContent = writer.replaceLine(in: content, at: task.lineNumber, with: newLine)
             try coordinatedWrite(newContent, to: fileURL)
             reload()
+            performPostWriteAction()
         } catch {
             self.error = error.localizedDescription
         }
