@@ -16,6 +16,7 @@ struct ContentView: View {
         case todo = "To Do"
         case upcoming = "Upcoming"
         case incomplete = "Incomplete"
+        case completed = "Completed"
         case all = "All"
     }
 
@@ -39,6 +40,8 @@ struct ContentView: View {
             }
         case .incomplete:
             return store.incompleteTasks
+        case .completed:
+            return store.tasks.filter { $0.status.isComplete }
         case .all:
             return store.tasks
         }
@@ -408,6 +411,8 @@ struct ContentView: View {
             }.count
         case .incomplete:
             return store.incompleteTasks.count
+        case .completed:
+            return store.tasks.filter { $0.status.isComplete }.count
         case .all:
             return store.tasks.count
         }
@@ -418,6 +423,7 @@ struct ContentView: View {
         case .todo: "star.circle"
         case .upcoming: "calendar"
         case .incomplete: "circle"
+        case .completed: "checkmark.circle"
         case .all: "list.bullet"
         }
     }
