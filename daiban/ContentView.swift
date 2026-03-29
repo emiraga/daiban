@@ -232,21 +232,23 @@ struct ContentView: View {
                     }
 
                     ToolbarItem(placement: .secondaryAction) {
-                        Menu {
-                            Button("Reload", systemImage: "arrow.clockwise") {
-                                store.reload()
-                            }
-                            Button("Change Vault", systemImage: "folder") {
-                                showingFolderPicker = true
-                            }
-                            Button("Settings", systemImage: "gear") {
-                                showingSettings = true
-                            }
-                            Button("Disconnect Vault", systemImage: "xmark.circle", role: .destructive) {
-                                store.disconnectVault()
-                            }
-                        } label: {
-                            Label("More", systemImage: "ellipsis.circle")
+                        Button("Reload", systemImage: "arrow.clockwise") {
+                            store.reload()
+                        }
+                    }
+                    ToolbarItem(placement: .secondaryAction) {
+                        Button("Change Vault", systemImage: "folder") {
+                            showingFolderPicker = true
+                        }
+                    }
+                    ToolbarItem(placement: .secondaryAction) {
+                        Button("Settings", systemImage: "gear") {
+                            showingSettings = true
+                        }
+                    }
+                    ToolbarItem(placement: .secondaryAction) {
+                        Button("Disconnect Vault", systemImage: "xmark.circle", role: .destructive) {
+                            store.disconnectVault()
                         }
                     }
                 }
