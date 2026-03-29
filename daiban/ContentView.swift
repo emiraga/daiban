@@ -196,6 +196,9 @@ struct ContentView: View {
         NavigationStack {
             taskList
                 .navigationTitle("Daiban")
+                #if !os(macOS)
+                .navigationBarTitleDisplayMode(.inline)
+                #endif
                 .searchable(text: $searchText, prompt: "Filter tasks")
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
