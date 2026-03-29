@@ -76,6 +76,10 @@ final class VaultStore {
 
     /// Called by the view layer after the user picks a folder via .fileImporter
     func setVault(url: URL) {
+        guard url.startAccessingSecurityScopedResource() else {
+            error = "Failed to access the selected folder"
+            return
+        }
         saveBookmark(for: url)
         vaultURL = url
         refreshDailyNotesConfig()
