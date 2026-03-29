@@ -1,7 +1,9 @@
 import Foundation
+
+#if os(macOS)
 import CoreServices
 
-/// Watches a directory tree for file changes using FSEvents.
+/// Watches a directory tree for file changes using FSEvents (macOS only).
 final class FileWatcher {
     private var stream: FSEventStreamRef?
     private let callback: () -> Void
@@ -90,3 +92,14 @@ private func fsEventCallback(
         watcher.handleEvent()
     }
 }
+
+#else
+
+/// No-op file watcher for platforms without FSEvents (iOS, visionOS).
+final class FileWatcher {
+    init(debounceInterval: TimeInterval = 0.5, callback: @escaping () -> Void) {}
+    func watch(directory: URL) {}
+    func stop() {}
+}
+
+#endif

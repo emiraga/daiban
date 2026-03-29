@@ -27,6 +27,7 @@ Status: [ ] todo, [x] done, [-] cancelled, [/] in-progress
 
 ## Build
 - `xcodebuild -scheme daiban -destination 'platform=macOS' build`
+- `xcodebuild -scheme daiban -destination 'platform=iOS Simulator,name=iPhone 17' build`
 - Package tests: `cd daiban/Packages/DaibanCore && swift test`
 - Regex literals use `#/.../#` extended delimiters (emojis break bare `/.../ `)
 

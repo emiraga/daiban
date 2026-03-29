@@ -250,7 +250,11 @@ struct ContentView: View {
                 Button("Change Vault", systemImage: "folder") {
                     showingFolderPicker = true
                 }
-                #if os(iOS)
+                #if os(macOS)
+                SettingsLink {
+                    Label("Settings", systemImage: "gear")
+                }
+                #else
                 Button("Settings", systemImage: "gear") {
                     showingSettings = true
                 }

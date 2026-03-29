@@ -33,6 +33,7 @@
 		3D2FE5D12F77EEEC00CD99E6 /* daibanUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = daibanUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3D2FE5E42F77F11300CD99E6 /* DaibanCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = DaibanCore; sourceTree = "<group>"; };
 		3D2FE5F12F7809A400CD99E6 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		3D2FE6222F78C44E00CD99E6 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -82,6 +83,7 @@
 		3D2FE5AF2F77EEEB00CD99E6 = {
 			isa = PBXGroup;
 			children = (
+				3D2FE6222F78C44E00CD99E6 /* CLAUDE.md */,
 				3D2FE5F12F7809A400CD99E6 /* README.md */,
 				3D2FE5E52F77F11300CD99E6 /* Packages */,
 				3D2FE5BA2F77EEEB00CD99E6 /* daiban */,
