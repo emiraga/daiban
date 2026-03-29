@@ -266,9 +266,15 @@ struct ContentView: View {
             Section("View") {
                 ForEach(ViewMode.allCases, id: \.self) { mode in
                     let count = taskCount(for: mode)
-                    Label("\(mode.rawValue) (\(count))", systemImage: icon(for: mode))
-                        .onTapGesture { selectedViewMode = mode }
-                        .foregroundStyle(selectedViewMode == mode ? .primary : .secondary)
+                    Button {
+                        selectedViewMode = mode
+                    } label: {
+                        Label("\(mode.rawValue) (\(count))", systemImage: icon(for: mode))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(selectedViewMode == mode ? .primary : .secondary)
                 }
             }
 
