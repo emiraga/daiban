@@ -55,6 +55,30 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Completed Tasks") {
+                Picker("Retention", selection: $store.completedTaskRetention) {
+                    ForEach(CompletedTaskRetention.allCases, id: \.self) { retention in
+                        Text(retention.rawValue).tag(retention)
+                    }
+                }
+                .pickerStyle(.menu)
+
+                switch store.completedTaskRetention {
+                case .keepAll:
+                    Text("All completed tasks are shown regardless of age.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                case .ignoreOlderThanWeek:
+                    Text("Completed tasks older than 1 week are hidden. Tasks without any dates are kept.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                case .ignoreOlderThanWeekAndUndated:
+                    Text("Completed tasks older than 1 week and those without any dates are hidden.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             Section("Appearance") {
                 Picker("Theme", selection: $store.themePreference) {
                     ForEach(ThemePreference.allCases, id: \.self) { preference in

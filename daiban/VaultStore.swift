@@ -7,6 +7,12 @@ enum ThemePreference: String, CaseIterable {
     case dark = "Always Use Dark Theme"
 }
 
+enum CompletedTaskRetention: String, CaseIterable {
+    case keepAll = "Keep All"
+    case ignoreOlderThanWeek = "Hide Older Than 1 Week"
+    case ignoreOlderThanWeekAndUndated = "Hide Older Than 1 Week + Undated"
+}
+
 enum WriteMode: String, CaseIterable {
     case disabled = "Read Only"
     case immediate = "Immediate"
@@ -64,6 +70,13 @@ final class VaultStore {
         }
     }
 
+    var completedTaskRetention: CompletedTaskRetention {
+        didSet {
+            UserDefaults.standard.set(completedTaskRetention.rawValue, forKey: "completedTaskRetention")
+            reload()
+        }
+    }
+
     private(set) var pendingUpdates: [PendingUpdate] = []
 
     private let scanner = VaultScanner()
@@ -95,6 +108,8 @@ final class VaultStore {
         self.themePreference = savedTheme.flatMap(ThemePreference.init(rawValue:)) ?? .system
         let savedWriteMode = UserDefaults.standard.string(forKey: "writeMode")
         self.writeMode = savedWriteMode.flatMap(WriteMode.init(rawValue:)) ?? .disabled
+        let savedRetention = UserDefaults.standard.string(forKey: "completedTaskRetention")
+        self.completedTaskRetention = savedRetention.flatMap(CompletedTaskRetention.init(rawValue:)) ?? .ignoreOlderThanWeek
         restoreBookmark()
     }
 
@@ -117,12 +132,36 @@ final class VaultStore {
         error = nil
 
         let options = scanOptions
+        let retention = completedTaskRetention
 
         Task.detached { [scanner] in
             do {
                 let scanned = try scanner.scanVault(at: url, options: options)
+                let filtered: [ObsidianTask]
+                switch retention {
+                case .keepAll:
+                    filtered = scanned
+                case .ignoreOlderThanWeek:
+                    let oneWeekAgo = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: Date())!
+                    filtered = scanned.filter { task in
+                        guard task.status.isComplete else { return true }
+                        let referenceDate = task.doneDate
+                            ?? [task.createdDate, task.scheduledDate, task.dueDate].compactMap { $0 }.max()
+                        guard let referenceDate else { return true }
+                        return referenceDate >= oneWeekAgo
+                    }
+                case .ignoreOlderThanWeekAndUndated:
+                    let oneWeekAgo = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: Date())!
+                    filtered = scanned.filter { task in
+                        guard task.status.isComplete else { return true }
+                        let referenceDate = task.doneDate
+                            ?? [task.createdDate, task.scheduledDate, task.dueDate].compactMap { $0 }.max()
+                        guard let referenceDate else { return false }
+                        return referenceDate >= oneWeekAgo
+                    }
+                }
                 await MainActor.run { [self] in
-                    self.tasks = scanned
+                    self.tasks = filtered
                     self.isLoading = false
                 }
             } catch {

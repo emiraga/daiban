@@ -66,6 +66,20 @@ struct ContentView: View {
         }
     }
 
+    /// Returns tasks relevant for the To Do view: due/scheduled today or earlier, plus undated tasks
+    private func todoFilteredTasks(from tasks: [ObsidianTask]) -> [ObsidianTask] {
+        let endOfToday = Calendar.current.startOfDay(for: Date()).addingTimeInterval(86400)
+        let dated = tasks.filter { task in
+            if let due = task.dueDate, due < endOfToday { return true }
+            if let scheduled = task.scheduledDate, scheduled < endOfToday { return true }
+            return false
+        }
+        let undated = tasks.filter { task in
+            task.dueDate == nil && task.scheduledDate == nil
+        }
+        return dated + undated
+    }
+
     /// To Do view: tasks due/scheduled today or earlier first, then undated tasks sorted by priority
     private var todoGroupedTasks: [(String, [ObsidianTask])] {
         let tasks = filteredTasks
@@ -375,7 +389,7 @@ struct ContentView: View {
 
     private func taskCount(for mode: ViewMode) -> Int {
         switch mode {
-        case .todo: todoGroupedTasks.reduce(0) { $0 + $1.1.count }
+        case .todo: todoFilteredTasks(from: store.incompleteTasks).count
         case .incomplete: store.incompleteTasks.count
         case .all: store.tasks.count
         }

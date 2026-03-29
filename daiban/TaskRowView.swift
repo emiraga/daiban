@@ -10,13 +10,15 @@ struct TaskRowView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            Button(action: onToggle) {
-                Image(systemName: checkboxIcon)
-                    .foregroundStyle(checkboxColor)
-                    .font(.title3)
+            if !readOnly || task.status.isComplete || isPending {
+                Button(action: onToggle) {
+                    Image(systemName: checkboxIcon)
+                        .foregroundStyle(checkboxColor)
+                        .font(.title3)
+                }
+                .buttonStyle(.plain)
+                .disabled(readOnly)
             }
-            .buttonStyle(.plain)
-            .disabled(readOnly)
 
             VStack(alignment: .leading, spacing: 4) {
                 MarkdownText(task.description)
