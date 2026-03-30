@@ -341,7 +341,7 @@ struct ContentView: View {
             } else {
                 List {
                     ForEach(groupedTasks, id: \.0) { group, tasks in
-                        Section("\(group) (\(tasks.count))") {
+                        Section(tasks.count > 1 ? "\(group) (\(tasks.count))" : group) {
                             ForEach(tasks) { task in
                                 TaskRowView(
                                     task: task,
