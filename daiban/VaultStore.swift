@@ -38,6 +38,16 @@ struct PendingUpdate: Identifiable, Equatable {
     let timestamp: Date
 }
 
+struct RecentUpdate: Identifiable, Equatable {
+    let id = UUID()
+    let task: ObsidianTask
+    /// The original line content before the change (for undo)
+    let originalLine: String
+    /// The new line content after the change
+    let newLine: String
+    let timestamp: Date
+}
+
 @Observable
 final class VaultStore {
     private(set) var tasks: [ObsidianTask] = [] {
@@ -113,6 +123,7 @@ final class VaultStore {
     }
 
     private(set) var pendingUpdates: [PendingUpdate] = []
+    private(set) var recentUpdates: [RecentUpdate] = []
 
     private let scanner = VaultScanner()
     private let writer = TaskWriter()
@@ -237,9 +248,12 @@ final class VaultStore {
         for (filePath, updates) in updatesByFile {
             let fileURL = vaultURL.appendingPathComponent(filePath)
             var content = try String(contentsOf: fileURL, encoding: .utf8)
+            let lines = content.components(separatedBy: "\n")
             // Apply updates in reverse line order so line numbers stay valid
             let sorted = updates.sorted { $0.task.lineNumber > $1.task.lineNumber }
             for update in sorted {
+                let originalLine = lines[update.task.lineNumber]
+                recordRecentUpdate(task: update.task, originalLine: originalLine, newLine: update.newLine)
                 content = writer.replaceLine(in: content, at: update.task.lineNumber, with: update.newLine)
             }
             try coordinatedWrite(content, to: fileURL)
@@ -284,15 +298,39 @@ final class VaultStore {
         pendingUpdates.removeAll { $0.id == update.id }
     }
 
+    // MARK: - Recent Updates
+
+    private func recordRecentUpdate(task: ObsidianTask, originalLine: String, newLine: String) {
+        let update = RecentUpdate(task: task, originalLine: originalLine, newLine: newLine, timestamp: Date())
+        recentUpdates.insert(update, at: 0)
+    }
+
+    func undoRecentUpdate(_ update: RecentUpdate) throws {
+        guard let vaultURL else { return }
+
+        let fileURL = vaultURL.appendingPathComponent(update.task.filePath)
+        let content = try String(contentsOf: fileURL, encoding: .utf8)
+        let newContent = writer.replaceLine(in: content, at: update.task.lineNumber, with: update.originalLine)
+        try coordinatedWrite(newContent, to: fileURL)
+        recentUpdates.removeAll { $0.id == update.id }
+        reload()
+    }
+
+    func clearRecentUpdates() {
+        recentUpdates.removeAll()
+    }
+
     private func writeToggle(_ task: ObsidianTask) {
         guard let vaultURL else { return }
 
         let fileURL = vaultURL.appendingPathComponent(task.filePath)
         do {
             let content = try String(contentsOf: fileURL, encoding: .utf8)
+            let originalLine = content.components(separatedBy: "\n")[task.lineNumber]
             let newLine = writer.toggleCompletion(task)
             let newContent = writer.replaceLine(in: content, at: task.lineNumber, with: newLine)
             try coordinatedWrite(newContent, to: fileURL)
+            recordRecentUpdate(task: task, originalLine: originalLine, newLine: newLine)
             reload()
             performPostWriteAction()
         } catch {

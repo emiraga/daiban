@@ -9,6 +9,7 @@ struct ContentView: View {
     @AppStorage("selectedGrouping") private var selectedGrouping = TaskGrouping.file
     @State private var showingFolderPicker = false
     @State private var showingPendingUpdates = false
+    @State private var showingRecentUpdates = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     enum ViewMode: String {
@@ -183,6 +184,16 @@ struct ContentView: View {
                     }
             }
         }
+        .sheet(isPresented: $showingRecentUpdates) {
+            NavigationStack {
+                RecentUpdatesView(store: store)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showingRecentUpdates = false }
+                        }
+                    }
+            }
+        }
     }
 
     @ViewBuilder
@@ -232,6 +243,12 @@ struct ContentView: View {
                     if store.writeMode == .batched {
                         ToolbarItem(placement: .primaryAction) {
                             pendingUpdatesButton
+                        }
+                    }
+
+                    if store.writeMode != .disabled {
+                        ToolbarItem(placement: .primaryAction) {
+                            recentUpdatesButton
                         }
                     }
 
@@ -320,6 +337,17 @@ struct ContentView: View {
                 }
             }
 
+            if store.writeMode != .disabled && !store.recentUpdates.isEmpty {
+                Section {
+                    Button {
+                        showingRecentUpdates = true
+                    } label: {
+                        Label("Recent Updates", systemImage: "clock.arrow.circlepath")
+                            .badge(store.recentUpdates.count)
+                    }
+                }
+            }
+
             Section {
                 Button("Reload", systemImage: "arrow.clockwise") {
                     store.reload()
@@ -390,6 +418,25 @@ struct ContentView: View {
                             .foregroundStyle(.white)
                             .padding(3)
                             .background(.red, in: .circle)
+                            .offset(x: 6, y: -6)
+                    }
+                }
+        }
+    }
+
+    private var recentUpdatesButton: some View {
+        Button {
+            showingRecentUpdates = true
+        } label: {
+            Image(systemName: "clock.arrow.circlepath")
+                .overlay(alignment: .topTrailing) {
+                    if !store.recentUpdates.isEmpty {
+                        Text("\(store.recentUpdates.count)")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                            .padding(3)
+                            .background(.orange, in: .circle)
                             .offset(x: 6, y: -6)
                     }
                 }
