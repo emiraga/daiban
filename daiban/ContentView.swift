@@ -162,6 +162,12 @@ struct ContentView: View {
                 welcomeView
             }
         }
+        .onChange(of: store.showSettings) { _, show in
+            if show {
+                selectedViewMode = .settings
+                store.showSettings = false
+            }
+        }
         .fileImporter(
             isPresented: $showingFolderPicker,
             allowedContentTypes: [.folder],

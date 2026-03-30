@@ -46,6 +46,7 @@ final class VaultStore {
     private(set) var incompleteTasks: [ObsidianTask] = []
     private(set) var isLoading = false
     var error: String?
+    var showSettings = false
     private(set) var vaultURL: URL?
     var useDailyNoteDate: Bool {
         didSet {

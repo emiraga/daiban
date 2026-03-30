@@ -18,5 +18,15 @@ struct DaibanApp: App {
                 .environment(\.obsidianVaultName, store.vaultName)
                 .preferredColorScheme(preferredColorScheme)
         }
+        #if os(macOS)
+        .commands {
+            CommandGroup(after: .appSettings) {
+                Button("Settings...") {
+                    store.showSettings = true
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+        }
+        #endif
     }
 }
