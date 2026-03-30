@@ -8,16 +8,25 @@ struct ContentView: View {
     @AppStorage("selectedViewMode") private var selectedViewMode = ViewMode.todo
     @AppStorage("selectedGrouping") private var selectedGrouping = TaskGrouping.file
     @State private var showingFolderPicker = false
-    @State private var showingSettingsInline = false
     @State private var showingPendingUpdates = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    enum ViewMode: String, CaseIterable {
+    enum ViewMode: String {
         case todo = "To Do"
         case upcoming = "Upcoming"
         case incomplete = "Incomplete"
         case completed = "Completed"
         case all = "All"
+        case settings = "Settings"
+
+        static let taskModes: [ViewMode] = [.todo, .upcoming, .incomplete, .completed, .all]
+
+        var supportsGrouping: Bool {
+            switch self {
+            case .upcoming, .incomplete, .completed, .all: true
+            case .todo, .settings: false
+            }
+        }
     }
 
     enum TaskGrouping: String, CaseIterable {
@@ -44,6 +53,8 @@ struct ContentView: View {
             return store.tasks.filter { $0.status.isComplete }
         case .all:
             return store.tasks
+        case .settings:
+            return []
         }
     }
 
@@ -192,13 +203,13 @@ struct ContentView: View {
                         Menu {
                             Section("View") {
                                 Picker("View", selection: $selectedViewMode) {
-                                    ForEach(ViewMode.allCases, id: \.self) { mode in
+                                    ForEach(ViewMode.taskModes, id: \.self) { mode in
                                         Text(mode.rawValue).tag(mode)
                                     }
                                 }
                             }
 
-                            if selectedViewMode != .todo {
+                            if selectedViewMode.supportsGrouping {
                                 Section("Group By") {
                                     Picker("Group By", selection: $selectedGrouping) {
                                         ForEach(TaskGrouping.allCases, id: \.self) { grouping in
@@ -252,7 +263,7 @@ struct ContentView: View {
         NavigationSplitView {
             sidebar
         } detail: {
-            if showingSettingsInline {
+            if selectedViewMode == .settings {
                 SettingsView(store: store)
                     .navigationTitle("Settings")
             } else {
@@ -265,11 +276,10 @@ struct ContentView: View {
     private var sidebar: some View {
         List {
             Section("View") {
-                ForEach(ViewMode.allCases, id: \.self) { mode in
+                ForEach(ViewMode.taskModes, id: \.self) { mode in
                     let count = taskCount(for: mode)
                     Button {
                         selectedViewMode = mode
-                        showingSettingsInline = false
                     } label: {
                         Label("\(mode.rawValue) (\(count))", systemImage: icon(for: mode))
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -281,7 +291,7 @@ struct ContentView: View {
                 }
             }
 
-            if selectedViewMode != .todo {
+            if selectedViewMode.supportsGrouping {
                 Section("Group By") {
                     Picker("Grouping", selection: $selectedGrouping) {
                         ForEach(TaskGrouping.allCases, id: \.self) { grouping in
@@ -309,7 +319,7 @@ struct ContentView: View {
                     store.reload()
                 }
                 Button("Settings", systemImage: "gear") {
-                    showingSettingsInline.toggle()
+                    selectedViewMode = .settings
                 }
                 Button("Change Vault", systemImage: "folder") {
                     showingFolderPicker = true
@@ -430,6 +440,8 @@ struct ContentView: View {
             return store.tasks.filter { $0.status.isComplete }.count
         case .all:
             return store.tasks.count
+        case .settings:
+            return 0
         }
     }
 
@@ -440,6 +452,7 @@ struct ContentView: View {
         case .incomplete: "circle"
         case .completed: "checkmark.circle"
         case .all: "list.bullet"
+        case .settings: "gear"
         }
     }
 
