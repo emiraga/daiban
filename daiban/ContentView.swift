@@ -385,16 +385,21 @@ struct ContentView: View {
     private func groupByDate(
         _ tasks: [ObsidianTask], keyPath: KeyPath<ObsidianTask, Date?>, noDateLabel: String
     ) -> [(String, [ObsidianTask])] {
-        Dictionary(grouping: tasks) { task -> String in
+        let grouped = Dictionary(grouping: tasks) { task -> Date? in
             if let date = task[keyPath: keyPath] {
-                return date.formatted(date: .abbreviated, time: .omitted)
+                return Calendar.current.startOfDay(for: date)
             }
-            return noDateLabel
+            return nil
         }
-        .sorted { lhs, rhs in
-            if lhs.key == noDateLabel { return false }
-            if rhs.key == noDateLabel { return true }
-            return lhs.key < rhs.key
+        return grouped.sorted { lhs, rhs in
+            switch (lhs.key, rhs.key) {
+            case (nil, _): return false
+            case (_, nil): return true
+            case let (l?, r?): return l < r
+            }
+        }.map { date, tasks in
+            let label = date?.formatted(date: .abbreviated, time: .omitted) ?? noDateLabel
+            return (label, tasks)
         }
     }
 
