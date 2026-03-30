@@ -1,18 +1,25 @@
 import Foundation
 
-public enum DailyNoteDateTarget: String, Sendable, CaseIterable {
-    case dueDate = "Due Date"
-    case scheduledDate = "Scheduled Date"
-}
-
 public struct ScanOptions: Sendable {
-    /// When set, tasks in daily notes without the corresponding date field
-    /// will inherit the date from the daily note filename.
-    public let dailyNoteDateTarget: DailyNoteDateTarget?
+    /// When true, undated tasks (no due, scheduled, or start date) will have
+    /// their scheduled date set from the filename if a date can be extracted.
+    public let useFilenameDateAsScheduled: Bool
 
-    public static let `default` = ScanOptions(dailyNoteDateTarget: nil)
+    /// An additional Moment.js date format to try when extracting dates from filenames.
+    public let filenameDateAdditionalFormat: String?
 
-    public init(dailyNoteDateTarget: DailyNoteDateTarget?) {
-        self.dailyNoteDateTarget = dailyNoteDateTarget
+    /// Folders to restrict filename date extraction to. Empty means all folders.
+    public let filenameDateFolders: [String]
+
+    public static let `default` = ScanOptions(useFilenameDateAsScheduled: false)
+
+    public init(
+        useFilenameDateAsScheduled: Bool,
+        filenameDateAdditionalFormat: String? = nil,
+        filenameDateFolders: [String] = []
+    ) {
+        self.useFilenameDateAsScheduled = useFilenameDateAsScheduled
+        self.filenameDateAdditionalFormat = filenameDateAdditionalFormat
+        self.filenameDateFolders = filenameDateFolders
     }
 }

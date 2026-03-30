@@ -16,11 +16,14 @@ public struct VaultScanner: Sendable {
             throw VaultScanError.cannotEnumerateDirectory(url.path)
         }
 
-        let dailyNotesConfig: DailyNotesConfig?
-        if options.dailyNoteDateTarget != nil {
-            dailyNotesConfig = DailyNotesConfig.load(vaultURL: url)
+        let extractor: FilenameDateExtractor?
+        if options.useFilenameDateAsScheduled {
+            extractor = FilenameDateExtractor(
+                additionalFormat: options.filenameDateAdditionalFormat,
+                folders: options.filenameDateFolders
+            )
         } else {
-            dailyNotesConfig = nil
+            extractor = nil
         }
 
         var tasks: [ObsidianTask] = []
@@ -35,11 +38,10 @@ public struct VaultScanner: Sendable {
             let content = try String(contentsOf: fileURL, encoding: .utf8)
             var fileTasks = parser.parseFile(content: content, filePath: relativePath)
 
-            if let target = options.dailyNoteDateTarget,
-               let config = dailyNotesConfig,
-               let noteDate = config.dateFromFilePath(relativePath) {
+            if let extractor,
+               let noteDate = extractor.dateFromFilePath(relativePath) {
                 fileTasks = fileTasks.map { task in
-                    applyDailyNoteDate(task, date: noteDate, target: target)
+                    applyFilenameDateAsScheduled(task, date: noteDate)
                 }
             }
 
@@ -54,45 +56,28 @@ public struct VaultScanner: Sendable {
         DailyNotesConfig.load(vaultURL: vaultURL)
     }
 
-    private func applyDailyNoteDate(_ task: ObsidianTask, date: Date, target: DailyNoteDateTarget) -> ObsidianTask {
-        switch target {
-        case .dueDate where task.dueDate == nil:
-            return ObsidianTask(
-                description: task.description,
-                status: task.status,
-                priority: task.priority,
-                dueDate: date,
-                scheduledDate: task.scheduledDate,
-                startDate: task.startDate,
-                createdDate: task.createdDate,
-                doneDate: task.doneDate,
-                recurrence: task.recurrence,
-                tags: task.tags,
-                filePath: task.filePath,
-                lineNumber: task.lineNumber,
-                rawLine: task.rawLine,
-                indentation: task.indentation
-            )
-        case .scheduledDate where task.scheduledDate == nil:
-            return ObsidianTask(
-                description: task.description,
-                status: task.status,
-                priority: task.priority,
-                dueDate: task.dueDate,
-                scheduledDate: date,
-                startDate: task.startDate,
-                createdDate: task.createdDate,
-                doneDate: task.doneDate,
-                recurrence: task.recurrence,
-                tags: task.tags,
-                filePath: task.filePath,
-                lineNumber: task.lineNumber,
-                rawLine: task.rawLine,
-                indentation: task.indentation
-            )
-        default:
+    /// Applies the filename date as scheduled date only if the task is "undated"
+    /// (has no due, scheduled, or start date).
+    private func applyFilenameDateAsScheduled(_ task: ObsidianTask, date: Date) -> ObsidianTask {
+        guard task.dueDate == nil, task.scheduledDate == nil, task.startDate == nil else {
             return task
         }
+        return ObsidianTask(
+            description: task.description,
+            status: task.status,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            scheduledDate: date,
+            startDate: task.startDate,
+            createdDate: task.createdDate,
+            doneDate: task.doneDate,
+            recurrence: task.recurrence,
+            tags: task.tags,
+            filePath: task.filePath,
+            lineNumber: task.lineNumber,
+            rawLine: task.rawLine,
+            indentation: task.indentation
+        )
     }
 }
 

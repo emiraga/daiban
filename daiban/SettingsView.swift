@@ -1,4 +1,3 @@
-import ObsidianParser
 import SwiftUI
 
 struct SettingsView: View {
@@ -6,28 +5,28 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Daily Notes") {
-                Toggle("Use date from Daily Note filename", isOn: $store.useDailyNoteDate)
+            Section("Dates from file names") {
+                Toggle("Use filename as Scheduled date for undated tasks", isOn: $store.useDailyNoteDate)
+                Text("If this option is enabled, any undated tasks will be given a default Scheduled date extracted from their file name.\nBy default, matches both `YYYY-MM-DD` and `YYYYMMDD` date formats.\nUndated tasks have none of Due, Scheduled and Start dates.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
                 if store.useDailyNoteDate {
-                    Picker("Apply as", selection: $store.dailyNoteDateTarget) {
-                        ForEach(DailyNoteDateTarget.allCases, id: \.self) { target in
-                            Text(target.rawValue).tag(target)
-                        }
-                    }
-                    .pickerStyle(.menu)
+                    TextField(
+                        "Additional date format",
+                        text: $store.filenameDateAdditionalFormat,
+                        prompt: Text("e.g. MMM DD YYYY"))
+                    Text("An additional date format (Moment.js syntax) to recognize when extracting dates from file names.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
 
-                    if let config = store.dailyNotesConfig {
-                        LabeledContent(
-                            "Detected folder", value: config.folder.isEmpty ? "/" : config.folder)
-                        LabeledContent("Detected format", value: config.dateFormat)
-                    } else if store.hasVault {
-                        Label(
-                            "No daily notes plugin config found in vault",
-                            systemImage: "exclamationmark.triangle"
-                        )
-                        .foregroundStyle(.orange)
-                    }
+                    TextField(
+                        "Folders",
+                        text: $store.filenameDateFolders,
+                        prompt: Text("Leave empty for all folders"))
+                    Text("Leave empty to use filename dates everywhere, or enter a comma-separated list of folders.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -133,8 +132,5 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        #if os(macOS)
-            .frame(minWidth: 400, minHeight: 200)
-        #endif
     }
 }

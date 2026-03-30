@@ -18,10 +18,5 @@ struct DaibanApp: App {
                 .environment(\.obsidianVaultName, store.vaultName)
                 .preferredColorScheme(preferredColorScheme)
         }
-        #if os(macOS)
-        Settings {
-            SettingsView(store: store)
-        }
-        #endif
     }
 }

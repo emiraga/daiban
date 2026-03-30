@@ -47,8 +47,6 @@ final class VaultStore {
     private(set) var isLoading = false
     var error: String?
     private(set) var vaultURL: URL?
-    private(set) var dailyNotesConfig: DailyNotesConfig?
-
     var useDailyNoteDate: Bool {
         didSet {
             UserDefaults.standard.set(useDailyNoteDate, forKey: "useDailyNoteDate")
@@ -56,9 +54,16 @@ final class VaultStore {
         }
     }
 
-    var dailyNoteDateTarget: DailyNoteDateTarget {
+    var filenameDateAdditionalFormat: String {
         didSet {
-            UserDefaults.standard.set(dailyNoteDateTarget.rawValue, forKey: "dailyNoteDateTarget")
+            UserDefaults.standard.set(filenameDateAdditionalFormat, forKey: "filenameDateAdditionalFormat")
+            reload()
+        }
+    }
+
+    var filenameDateFolders: String {
+        didSet {
+            UserDefaults.standard.set(filenameDateFolders, forKey: "filenameDateFolders")
             reload()
         }
     }
@@ -131,8 +136,8 @@ final class VaultStore {
     init() {
         self.vaultNameOverride = UserDefaults.standard.string(forKey: "vaultNameOverride") ?? ""
         self.useDailyNoteDate = UserDefaults.standard.bool(forKey: "useDailyNoteDate")
-        let savedTarget = UserDefaults.standard.string(forKey: "dailyNoteDateTarget")
-        self.dailyNoteDateTarget = savedTarget.flatMap(DailyNoteDateTarget.init(rawValue:)) ?? .dueDate
+        self.filenameDateAdditionalFormat = UserDefaults.standard.string(forKey: "filenameDateAdditionalFormat") ?? ""
+        self.filenameDateFolders = UserDefaults.standard.string(forKey: "filenameDateFolders") ?? ""
         let savedTheme = UserDefaults.standard.string(forKey: "themePreference")
         self.themePreference = savedTheme.flatMap(ThemePreference.init(rawValue:)) ?? .system
         let savedWriteMode = UserDefaults.standard.string(forKey: "writeMode")
@@ -154,7 +159,6 @@ final class VaultStore {
         }
         saveBookmark(for: url)
         vaultURL = url
-        refreshDailyNotesConfig()
         startWatching(url: url)
         reload()
     }
@@ -319,7 +323,6 @@ final class VaultStore {
         UserDefaults.standard.removeObject(forKey: Self.bookmarkKey)
         vaultURL = nil
         tasks = []
-        dailyNotesConfig = nil
     }
 
     // MARK: - Private
@@ -334,15 +337,16 @@ final class VaultStore {
     }
 
     private var scanOptions: ScanOptions {
-        ScanOptions(dailyNoteDateTarget: useDailyNoteDate ? dailyNoteDateTarget : nil)
-    }
-
-    private func refreshDailyNotesConfig() {
-        guard let url = vaultURL else {
-            dailyNotesConfig = nil
-            return
-        }
-        dailyNotesConfig = scanner.loadDailyNotesConfig(vaultURL: url)
+        let folders = filenameDateFolders
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        let additionalFormat = filenameDateAdditionalFormat.trimmingCharacters(in: .whitespaces)
+        return ScanOptions(
+            useFilenameDateAsScheduled: useDailyNoteDate,
+            filenameDateAdditionalFormat: additionalFormat.isEmpty ? nil : additionalFormat,
+            filenameDateFolders: folders
+        )
     }
 
     // MARK: - Bookmark persistence
@@ -392,7 +396,6 @@ final class VaultStore {
             if isStale {
                 saveBookmark(for: url)
             }
-            refreshDailyNotesConfig()
             startWatching(url: url)
             reload()
         } catch {

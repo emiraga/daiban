@@ -19,11 +19,5 @@
 - widgets everywhere, any kind of supported widget
 - counter of pending tasks
 
-## Build
-
-```
-xcodebuild -scheme daiban -destination 'platform=macOS' build
-```
-
 ## Todo
 For widgets perhaps we have to use SwiftData

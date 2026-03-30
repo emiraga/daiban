@@ -8,7 +8,7 @@ struct ContentView: View {
     @AppStorage("selectedViewMode") private var selectedViewMode = ViewMode.todo
     @AppStorage("selectedGrouping") private var selectedGrouping = TaskGrouping.file
     @State private var showingFolderPicker = false
-    @State private var showingSettings = false
+    @State private var showingSettingsInline = false
     @State private var showingPendingUpdates = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -166,19 +166,6 @@ struct ContentView: View {
                     }
             }
         }
-        #if os(iOS)
-            .sheet(isPresented: $showingSettings) {
-                NavigationStack {
-                    SettingsView(store: store)
-                    .navigationTitle("Settings")
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") { showingSettings = false }
-                        }
-                    }
-                }
-            }
-        #endif
     }
 
     @ViewBuilder
@@ -237,8 +224,11 @@ struct ContentView: View {
                         }
                     }
                     ToolbarItem(placement: .secondaryAction) {
-                        Button("Settings", systemImage: "gear") {
-                            showingSettings = true
+                        NavigationLink {
+                            SettingsView(store: store)
+                                .navigationTitle("Settings")
+                        } label: {
+                            Label("Settings", systemImage: "gear")
                         }
                     }
                     ToolbarItem(placement: .secondaryAction) {
@@ -262,7 +252,12 @@ struct ContentView: View {
         NavigationSplitView {
             sidebar
         } detail: {
-            taskList
+            if showingSettingsInline {
+                SettingsView(store: store)
+                    .navigationTitle("Settings")
+            } else {
+                taskList
+            }
         }
         .searchable(text: $searchText, prompt: "Filter tasks")
     }
@@ -274,6 +269,7 @@ struct ContentView: View {
                     let count = taskCount(for: mode)
                     Button {
                         selectedViewMode = mode
+                        showingSettingsInline = false
                     } label: {
                         Label("\(mode.rawValue) (\(count))", systemImage: icon(for: mode))
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -312,15 +308,9 @@ struct ContentView: View {
                 Button("Reload", systemImage: "arrow.clockwise") {
                     store.reload()
                 }
-                #if os(macOS)
-                    SettingsLink {
-                        Label("Settings", systemImage: "gear")
-                    }
-                #else
-                    Button("Settings", systemImage: "gear") {
-                        showingSettings = true
-                    }
-                #endif
+                Button("Settings", systemImage: "gear") {
+                    showingSettingsInline.toggle()
+                }
                 Button("Change Vault", systemImage: "folder") {
                     showingFolderPicker = true
                 }
