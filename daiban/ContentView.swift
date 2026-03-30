@@ -400,6 +400,9 @@ struct ContentView: View {
                         }
                     }
                 }
+                .refreshable {
+                    await store.refresh()
+                }
                 .id(selectedViewMode)
             }
         }

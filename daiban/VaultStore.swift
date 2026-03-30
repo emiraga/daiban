@@ -186,29 +186,7 @@ final class VaultStore {
         Task.detached { [scanner] in
             do {
                 let scanned = try scanner.scanVault(at: url, options: options)
-                let filtered: [ObsidianTask]
-                switch retention {
-                case .keepAll:
-                    filtered = scanned
-                case .ignoreOlderThanWeek:
-                    let oneWeekAgo = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: Date())!
-                    filtered = scanned.filter { task in
-                        guard task.status.isComplete else { return true }
-                        let referenceDate = task.doneDate
-                            ?? [task.createdDate, task.scheduledDate, task.dueDate].compactMap { $0 }.max()
-                        guard let referenceDate else { return true }
-                        return referenceDate >= oneWeekAgo
-                    }
-                case .ignoreOlderThanWeekAndUndated:
-                    let oneWeekAgo = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: Date())!
-                    filtered = scanned.filter { task in
-                        guard task.status.isComplete else { return true }
-                        let referenceDate = task.doneDate
-                            ?? [task.createdDate, task.scheduledDate, task.dueDate].compactMap { $0 }.max()
-                        guard let referenceDate else { return false }
-                        return referenceDate >= oneWeekAgo
-                    }
-                }
+                let filtered = Self.filterTasks(scanned, retention: retention)
                 await MainActor.run { [self] in
                     self.tasks = filtered
                     self.isLoading = false
@@ -218,6 +196,51 @@ final class VaultStore {
                     self.error = error.localizedDescription
                     self.isLoading = false
                 }
+            }
+        }
+    }
+
+    func refresh() async {
+        guard let url = vaultURL else { return }
+        isLoading = true
+        error = nil
+
+        let options = scanOptions
+        let retention = completedTaskRetention
+
+        do {
+            let scanned = try await Task.detached { [scanner] in
+                try scanner.scanVault(at: url, options: options)
+            }.value
+            self.tasks = Self.filterTasks(scanned, retention: retention)
+            self.isLoading = false
+        } catch {
+            self.error = error.localizedDescription
+            self.isLoading = false
+        }
+    }
+
+    private static func filterTasks(_ scanned: [ObsidianTask], retention: CompletedTaskRetention) -> [ObsidianTask] {
+        switch retention {
+        case .keepAll:
+            return scanned
+        case .ignoreOlderThanWeek:
+            let oneWeekAgo = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: Date())!
+            return scanned.filter { task in
+                guard task.status.isComplete else { return true }
+                let referenceDate = task.doneDate
+                    ?? [task.createdDate, task.scheduledDate, task.dueDate].compactMap { $0 }.max()
+                guard let referenceDate else { return true }
+                return referenceDate >= oneWeekAgo
+            }
+        case .ignoreOlderThanWeekAndUndated:
+            let oneWeekAgo = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: Date())!
+            return scanned.filter { task in
+                guard task.status.isComplete else { return true }
+                let referenceDate = task.doneDate
+                    ?? [task.createdDate, task.scheduledDate, task.dueDate].compactMap { $0 }.max()
+                guard let referenceDate else { return false }
+                return referenceDate >= oneWeekAgo
             }
         }
     }
