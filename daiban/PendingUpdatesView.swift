@@ -46,6 +46,9 @@ struct PendingUpdatesView: View {
             }
         }
         .navigationTitle("Pending Updates")
+        #if os(macOS)
+            .frame(minWidth: 400, minHeight: 300)
+        #endif
     }
 }
 
