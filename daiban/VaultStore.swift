@@ -220,7 +220,7 @@ final class VaultStore {
         }
     }
 
-    private static func filterTasks(_ scanned: [ObsidianTask], retention: CompletedTaskRetention) -> [ObsidianTask] {
+    private nonisolated static func filterTasks(_ scanned: [ObsidianTask], retention: CompletedTaskRetention) -> [ObsidianTask] {
         switch retention {
         case .keepAll:
             return scanned
